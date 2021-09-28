@@ -4,6 +4,8 @@
 #include "funcoes.h"
 int main()
 {
-    inicializaArquivo();
+
+
     return 0;
+
 }
