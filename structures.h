@@ -11,3 +11,11 @@ typedef struct TipoCluster{
     struct TipoDiretorio* pai;
     struct TipoListaFilhos* filhos;
 }NodoCluster;
+
+/* Estrutura com os metadados necessários */
+typedef struct TipoMetaDados{
+    short int tamIndice;
+    short int tamCluster; //em KB
+    short int initIndice; //em byte
+    short int initCluster; //em byte
+}MetaDados;
