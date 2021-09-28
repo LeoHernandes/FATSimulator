@@ -6,7 +6,7 @@
 void inicializaArquivo(){
 //ponteiro para o arquivo
 FILE *arq;
-    arq = fopen("ArqDisco.bin", "wt");
+    arq = fopen("ArqDisco.bin", "w+");
     if (arq == NULL){
         printf("Problemas na criacao do arquivo\n");
         return;
