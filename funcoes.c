@@ -64,7 +64,6 @@ void detectaComando(char comando[], int diretorioAtual, char tabela[]){
     if(strstr(comando, "MKFILE") != NULL){
         printf("Arquivo Criado!\n");
     }else if(strstr(comando, "MKDIR") != NULL){
-        mkDir(diretorioAtual, tabela);
         printf("Diretorio Criado!\n");
 
     }else if(strstr(comando, "DIR") != NULL){
