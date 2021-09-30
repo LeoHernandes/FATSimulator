@@ -2,40 +2,69 @@
 #include <stdlib.h>
 #include <string.h>
 #include "funcoes.h"
-#include "estruturas.h"
+
 
 
 void inicializaArquivo(){
 //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
-MetaDados metaDados = {256, 32000, 0, 4};
+MetaDados metaDados = {256, 32000, 0, 1};
 //ponteiro para o arquivo
 FILE *arq;
-    arq = fopen("ArqDisco.bin", "w+");
+    int bytesCluster = 0;
+    NodoCluster root = {"root", ".TXT", 0, NULL};
+    bytesCluster = 32000-sizeof(root);
+    arq = fopen("ArqDisco.txt", "r+b");
     if (arq == NULL){
         printf("Problemas na criacao do arquivo\n");
         return;
     }else{
-        //fwrite(&metaDados, sizeof(MetaDados), 1, arq);
-        fprintf(arq, "%d%d%d%d", metaDados.tamIndice, metaDados.tamCluster, metaDados.initIndice, metaDados.initCluster);
+        fwrite(&metaDados, sizeof(MetaDados), 1, arq);
         fwrite("\n", sizeof(char), 1, arq);
-        //Laço que a criação dos 256 clusters
-        for(int m = 0; m < 256; m++){
-            //Laço que controla a criação de um cluster com 32KB
-            for(int i = 0; i < (sizeof(char)*32000); i++){
+
+        for(int j = 0; j < 256; j++){
+            fwrite("00000000", 8, 1, arq);
+        }
+        fwrite("\n", sizeof(char), 1, arq);
+        //Laï¿½o que a criaï¿½ï¿½o dos 256 clusters
+        for(int m = 0; m < 255; m++){
+            //Laï¿½o que controla a criaï¿½ï¿½o de um cluster com 32KB, todos com 0
+            for(int i = 0; i < 32000; i++){
             fputs("0", arq);
             }
             fwrite("\n", sizeof(char), 1, arq);
         }
+        fseek(arq, sizeof(MetaDados), SEEK_SET);
+        fwrite("\n", sizeof(char), 1, arq);
+        fwrite("FFFFFFFF", 8, 1, arq);
+        //Criaï¿½ï¿½o do cluster root
+        fseek(arq, sizeof(MetaDados)+2049, SEEK_SET);
+        fwrite("\n", sizeof(char), 1, arq);
+        fwrite(&root, sizeof(NodoCluster), 1, arq);
+
     }
     fclose(arq);
 }
 
+MetaDados pegaMetadados(){
+    FILE *arq;
+    arq = fopen("ArqDisco.txt", "rb+");
+    MetaDados metaDados;
+    if (arq == NULL){ // Se houve erro na abertura{
+     printf("Problemas na abertura do arquivo\n");
+     return;
+     }else{
+    fread(&metaDados, sizeof(MetaDados), 1, arq);
+    }
+    fclose(arq);
+    return metaDados;
+}
 
-void detectaComando(char comando[], int diretorioAtual){
+void detectaComando(char comando[], int diretorioAtual, char tabela[]){
     int retorno = 0;
     if(strstr(comando, "MKFILE") != NULL){
         printf("Arquivo Criado!\n");
     }else if(strstr(comando, "MKDIR") != NULL){
+        mkDir(diretorioAtual, tabela);
         printf("Diretorio Criado!\n");
 
     }else if(strstr(comando, "DIR") != NULL){
@@ -56,7 +85,40 @@ void detectaComando(char comando[], int diretorioAtual){
     }else if(strstr(comando, "Sair") != NULL){
 
     }else{
-        printf("Comando não reconhecido.\n");
+        printf("Comando nï¿½o reconhecido.\n");
     }
 
 }
+
+void pegaTabela(char tabela[]){
+    FILE *arq;
+    arq = fopen("ArqDisco.txt", "r");
+    if (arq == NULL){ // Se houve erro na abertura{
+     printf("Problemas na abertura do arquivo\n");
+     return;
+     }else{
+    fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
+    fwrite("\n", sizeof(char), 1, arq);
+    for(int i = 0; i < 2048; i++){
+        fscanf(arq, "%c", &tabela[i]);
+    }
+    }
+    fclose(arq);
+
+}
+
+
+int primeiraPosicaoDisponivel(char tabela[]){
+    int controle = 0;
+    for(int i = 0; i < 2048; i += 8){
+        for(int m = 0; m < 8; m++){
+            if(tabela[m+i] != '0'){
+                m = 8;
+            }else if(m == 7){
+                return i;
+            }
+        }
+    }
+    return 0;
+}
+
