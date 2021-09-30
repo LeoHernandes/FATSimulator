@@ -12,7 +12,6 @@ MetaDados metaDados = {256, 32000, 0, 1};
 FILE *arq;
     int bytesCluster = 0;
     NodoCluster root = {"root", ".TXT", 0, NULL};
-    bytesCluster = 32000-sizeof(root);
     arq = fopen("ArqDisco.txt", "r+b");
     if (arq == NULL){
         printf("Problemas na criacao do arquivo\n");

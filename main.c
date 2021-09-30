@@ -10,7 +10,6 @@ int main()
 
     inicializaArquivo();
     MetaDados metaDados = pegaMetadados();
-    diretorioAtual = "root";
     pegaTabela(tabela);
 
     //Laço de execução
