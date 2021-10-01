@@ -1,25 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
-//#include "estruturas.h"
 #include "funcoes.h"
+
 int main()
 {
-    char comando[250];
+    char comando[250];       //variavel que armazena o comando do usuário
     char tabela[2048];
     int diretorioAtual = 0;
+    short int sair = 0;      //flag para manter o loop de escrita de comandos rodando
+    MetaDados metaDados;
 
     inicializaArquivo();
-    MetaDados metaDados = pegaMetadados();
     pegaTabela(tabela);
+    pegaMetadados(&metaDados);
 
-    //Laço de execução
+    //Laco de execução
     printf("%d", primeiraPosicaoDisponivel(tabela));
-    while(!strstr(comando, "SAIR")){
-    printf(":\>");
-    scanf("%s", &comando);
-    fflush(stdin);
-    detectaComando(comando, diretorioAtual, tabela);
 
-    }
+    do{
+        printf(":\\>");
+        scanf("%s", comando);
+        fflush(stdin);
+        detectaComando(comando, diretorioAtual, tabela, &sair);
+    }while(!sair);
+
     return 0;
 }

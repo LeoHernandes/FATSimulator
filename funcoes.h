@@ -1,6 +1,11 @@
 #include "estruturas.h"
+
 void inicializaArquivo();
-void diretorioAtual(char comando[], int diretorioAtual, char tabela[]);
-MetaDados pegaMetadados();
+
+void detectaComando(char comando[], int diretorioAtual, char tabela[], short int* sair);
+
+int pegaMetadados(MetaDados* metaDados);
+
 void pegaTabela(char tabela[]);
+
 int primeiraPosicaoDisponivel(char tabela[]);

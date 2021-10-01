@@ -4,17 +4,16 @@
 #include "funcoes.h"
 
 
-
 void inicializaArquivo(){
-//Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
-MetaDados metaDados = {256, 32000, 0, 1};
-//ponteiro para o arquivo
-FILE *arq;
+    MetaDados metaDados = {256, 32000, 0, 1}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
+    FILE *arq;                                //ponteiro para o arquivo
     int bytesCluster = 0;
     char zero = 0;
     char valor255 = 255;
-    NodoCluster root = {"root", ".TXT", 0, NULL};
+    NodoCluster root = {"root", "", 0, NULL};
+
     arq = fopen("ArqDisco.bin", "r+b");
+
     if (arq == NULL){
         printf("Problemas na criacao do arquivo\n");
         return;
@@ -26,64 +25,66 @@ FILE *arq;
             fwrite(&zero, sizeof(char), 1, arq);
         }
         fwrite("\n", sizeof(char), 1, arq);
-        //La�o que a cria��o dos 256 clusters
+
+        //Laco que a criacao dos 256 clusters
         for(int m = 0; m < 255; m++){
-            //La�o que controla a cria��o de um cluster com 32KB, todos com 0
+            //Laco que controla a criacao de um cluster com 32KB, todos com 0
             for(int i = 0; i < 32000; i++){
             fwrite(&zero, sizeof(char), 1, arq);
             }
             fwrite("\n", sizeof(char), 1, arq);
         }
+
         fseek(arq, sizeof(MetaDados), SEEK_SET);
         fwrite("\n", sizeof(char), 1, arq);
         fwrite(&valor255, sizeof(char), 1, arq);
-        //Cria��o do cluster root
+
+        //Criacao do cluster root
         fseek(arq, sizeof(MetaDados)+257, SEEK_SET);
         fwrite("\n", sizeof(char), 1, arq);
         fwrite(&root, sizeof(NodoCluster), 1, arq);
-
     }
     fclose(arq);
 }
 
-MetaDados pegaMetadados(){
+int pegaMetadados(MetaDados* metaDados){
+/* Carrega os metadados do arquivo de disco se possível
+ * Devolve 1 se a operação for feita com sucesso
+ * Devolve 0 se a operação falhar */
     FILE *arq;
     arq = fopen("ArqDisco.bin", "rb+");
-    MetaDados metaDados;
-    if (arq == NULL){ // Se houve erro na abertura{
-     printf("Problemas na abertura do arquivo\n");
-     return;
-     }else{
-    fread(&metaDados, sizeof(MetaDados), 1, arq);
+
+    //Se houve erro na abertura
+    if (arq == NULL){
+        printf("Problemas na abertura do arquivo\n");
+        return 0;
+    }else{
+        fread(metaDados, sizeof(MetaDados), 1, arq);
+        fclose(arq);
     }
-    fclose(arq);
-    return metaDados;
+
+    return 1;
 }
 
-void detectaComando(char comando[], int diretorioAtual, char tabela[]){
-    int retorno = 0;
-    if(strstr(comando, "MKFILE") != NULL){
+void detectaComando(char comando[], int diretorioAtual, char tabela[], short int* sair){
+    if(strcmp(comando, "MKFILE") == 0){
         printf("Arquivo Criado!\n");
-    }else if(strstr(comando, "MKDIR") != NULL){
+    }else if(strcmp(comando, "MKDIR") == 0){
         printf("Diretorio Criado!\n");
-
-    }else if(strstr(comando, "DIR") != NULL){
+    }else if(strcmp(comando, "DIR") == 0){
         printf("Mostrar arquivos e diretorios\n");
-
-    }else if(strstr(comando, "CD") != NULL){
+    }else if(strcmp(comando, "CD") == 0){
         printf("Mudar o direorio\n");
-
-    }else if(strstr(comando, "RM") != NULL){
+    }else if(strcmp(comando, "RM") == 0){
         printf("Deletar arquivo/direorio\n");
     }else if(strstr(comando, "EDIT") != NULL){
         printf("Editar arquivo\n");
-    }else if(strstr(comando, "MOVE") != NULL){
+    }else if(strcmp(comando, "MOVE") == 0){
         printf("Mover diretorio/arquivo\n");
-
-    }else if(strstr(comando, "RENAME") != NULL){
+    }else if(strcmp(comando, "RENAME") == 0){
         printf("Renomear arquivo/diretorio\n");
-    }else if(strstr(comando, "Sair") != NULL){
-
+    }else if(strcmp(comando, "SAIR") == 0){
+        *sair = 1;
     }else{
         printf("Comando nao reconhecido.\n");
     }
@@ -93,28 +94,30 @@ void detectaComando(char comando[], int diretorioAtual, char tabela[]){
 void pegaTabela(char tabela[]){
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r");
+
     if (arq == NULL){ // Se houve erro na abertura{
-     printf("Problemas na abertura do arquivo\n");
-     return;
-     }else{
-    fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
-    fwrite("\n", sizeof(char), 1, arq);
-    for(int i = 0; i < 256; i++){
-        fread(&tabela[i], sizeof(char),1, arq);
+        printf("Problemas na abertura do arquivo\n");
+    }else{
+        fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
+        fwrite("\n", sizeof(char), 1, arq);
+        for(int i = 0; i < 256; i++){
+            fread(&tabela[i], sizeof(char),1, arq);
+        }
+        fclose(arq);
     }
-    }
-    fclose(arq);
 
 }
 
 
 int primeiraPosicaoDisponivel(char tabela[]){
-    int controle = 0;
-    for(int i = 0; i < 256; i++){
-        if(tabela[i] == 0){
-            return i;
-        }
-    }
-    return 0;
+    int i = 0;
+
+    while(i < 256 && tabela[i] != 0)
+        i++;
+
+    if(i == 256)
+        i = 0;
+
+    return i;
 }
 
