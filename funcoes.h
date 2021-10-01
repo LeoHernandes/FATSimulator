@@ -9,3 +9,4 @@ int pegaMetadados(MetaDados* metaDados);
 void pegaTabela(char tabela[]);
 
 int primeiraPosicaoDisponivel(char tabela[]);
+int mkDir(int clusterPai, int cluster, char tabela[]);

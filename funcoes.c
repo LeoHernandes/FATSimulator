@@ -7,7 +7,7 @@
 void inicializaArquivo(){
     MetaDados metaDados = {256, 32000, 0, 1}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
     FILE *arq;                                //ponteiro para o arquivo
-    int bytesCluster = 0;
+    //int bytesCluster = 0;
     char zero = 0;
     char valor255 = 255;
     NodoCluster root = {"root", "", 0, NULL};
@@ -69,9 +69,13 @@ int pegaMetadados(MetaDados* metaDados){
 void detectaComando(char comando[], int diretorioAtual, char tabela[], short int* sair){
     if(strcmp(comando, "MKFILE") == 0){
         printf("Arquivo Criado!\n");
-    }else if(strcmp(comando, "MKDIR") == 0){
+    }else if(strstr(comando, "MKDIR") != NULL){
+         if(mkDir(diretorioAtual, primeiraPosicaoDisponivel(tabela), tabela)){
         printf("Diretorio Criado!\n");
-    }else if(strcmp(comando, "DIR") == 0){
+        }else{
+        printf("Erro ao criar o diretorio\n");
+        }
+    }else if(strstr(comando, "DIR") != NULL){
         printf("Mostrar arquivos e diretorios\n");
     }else if(strcmp(comando, "CD") == 0){
         printf("Mudar o direorio\n");
@@ -88,7 +92,6 @@ void detectaComando(char comando[], int diretorioAtual, char tabela[], short int
     }else{
         printf("Comando nao reconhecido.\n");
     }
-
 }
 
 void pegaTabela(char tabela[]){
@@ -121,3 +124,25 @@ int primeiraPosicaoDisponivel(char tabela[]){
     return i;
 }
 
+
+int mkDir( int clusterPai, int cluster, char tabela[]){
+    //Ponteiro para o arquivo
+    FILE *arq;
+    arq = fopen("ArqDisco.bin", "r+b");
+    int i = 0;
+    NodoCluster novo = {"root", ".TXT", 0, NULL};
+
+    tabela[cluster] = 255;
+
+    fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
+    fwrite(tabela, sizeof(char)*256, 1, arq);
+    fseek(arq, sizeof(MetaDados)+257+(32001*cluster), SEEK_SET);
+    fwrite("\n", sizeof(char), 1, arq);
+    i = fwrite(&novo, sizeof(NodoCluster), 1, arq);
+    if(i == 0){
+        fclose(arq);
+        return 0;
+    }
+    fclose(arq);
+    return 1;
+}
