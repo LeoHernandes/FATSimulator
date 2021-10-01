@@ -3,7 +3,6 @@
 #include <string.h>
 #include "funcoes.h"
 
-
 void inicializaArquivo(){
     MetaDados metaDados = {256, 32000, 0, 1}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
     FILE *arq;                                //ponteiro para o arquivo
