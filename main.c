@@ -11,7 +11,7 @@ int main()
     char comando[TAMSTRING];       //variavel que armazena o comando do usuário
     char tabela[2048];
     int diretorioAtual = 0;
-    short int sair = 0;      //flag para manter o loop de escrita de comandos rodando
+    short int sair = 0;            //flag para manter o loop de escrita de comandos rodando
     MetaDados metaDados;
 
     inicializaArquivo();

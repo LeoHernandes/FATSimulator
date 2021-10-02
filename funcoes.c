@@ -21,8 +21,9 @@ void leTexto(char texto[], int tamanhoTexto)
 }
 
 void inicializaArquivo(){
+    int i, j
     MetaDados metaDados = {TAMTABELA, TAMCLUSTER, 0, 1}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
-    FILE *arq;                                //ponteiro para o arquivo
+    FILE *arq;                                           //ponteiro para o arquivo
     //int bytesCluster = 0;
     char zero = 0;
     char valor255 = 255;
@@ -37,15 +38,15 @@ void inicializaArquivo(){
         fwrite(&metaDados, sizeof(MetaDados), 1, arq);
         fwrite("\n", sizeof(char), 1, arq);
 
-        for(int j = 0; j < TAMTABELA; j++){
+        for(i = 0; i < TAMTABELA; i++){
             fwrite(&zero, sizeof(char), 1, arq);
         }
         fwrite("\n", sizeof(char), 1, arq);
 
         //Laco que a criacao dos 256 clusters
-        for(int m = 0; m < TAMTABELA; m++){
+        for(i = 0; i < TAMTABELA; i++){
             //Laco que controla a criacao de um cluster com 32KB, todos com 0
-            for(int i = 0; i < TAMCLUSTER; i++){
+            for(int j = 0; j < TAMCLUSTER; j++){
             fwrite(&zero, sizeof(char), 1, arq);
             }
             fwrite("\n", sizeof(char), 1, arq);
@@ -90,6 +91,7 @@ void pegaOperacaoNome(char comando[], char** operacao, char** nome){
 }
 
 void pegaTabela(char tabela[]){
+    int i;
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r");
 
@@ -98,12 +100,11 @@ void pegaTabela(char tabela[]){
     }else{
         fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
         fwrite("\n", sizeof(char), 1, arq);
-        for(int i = 0; i < TAMTABELA; i++){
+        for(i = 0; i < TAMTABELA; i++){
             fread(&tabela[i], sizeof(char),1, arq);
         }
         fclose(arq);
     }
-
 }
 
 int primeiraPosicaoDisponivel(char tabela[]){
@@ -151,7 +152,6 @@ void detectaComando(char comando[], int diretorioAtual, char tabela[], short int
 /* Detecta os possíveis comandos exigidas pelo usuário,
  * separando a operação do possível nome de diretórios e arquivos */
     char *operacao = NULL, *nome = NULL;
-
 
     pegaOperacaoNome(comando, &operacao, &nome);
 
