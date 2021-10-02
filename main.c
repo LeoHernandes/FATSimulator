@@ -1,27 +1,10 @@
 /* CONSTANTES */
-#define TAMSTRING = 250
+#define TAMSTRING 250
 
 /* BIBLIOTECAS */
 #include <stdio.h>
 #include <stdlib.h>
 #include "funcoes.h"
-
-void leTexto(char texto[], int tamanhoTexto)
-//funcao que recebe string e controla o tamanho dela
-{
-    char dummy[tamanhoTexto + 1]; // com um caractere a mais do que o texto
-    fflush(stdin);
-    fgets(dummy, sizeof(dummy), stdin);
-    // O último caractere tem que ser '\n' para estar correto:
-    while(dummy[strlen(dummy) -1] != '\n')
-    {
-        printf("\nMaximo de %d caracteres, digite novamente\n-> ", tamanhoTexto - 1);
-        fflush(stdin);
-        fgets(dummy, sizeof(dummy), stdin); // le caracteres novamente
-    }
-    dummy[strlen(dummy) - 1]= '\0'; // sempre precisa substituir o '\n'
-    strcpy(texto, dummy); // transfere conteudo digitado sem o '\n'
-}
 
 int main()
 {

@@ -1,3 +1,14 @@
+/*------------*/
+/* CONSTANTES */
+/*------------*/
+
+#define TAMCLUSTER 32000
+#define TAMTABELA  256
+
+/*------------*/
+/* ESTRUTURAS */
+/*------------*/
+
 /* Lista simplesmente encadeada para armazenar todos os filhos (pastas e arquivos) de um nodo */
 typedef struct TipoListaFilhos{
     struct TipoCluster* filho;
@@ -6,7 +17,7 @@ typedef struct TipoListaFilhos{
 
 /* Árvore armazenando distribuição de arquivos e pastas num cluster */
 typedef struct TipoCluster{
-    char nome[50];
+    char* nome;
     char* extensao;
     struct TipoCluster* pai;
     struct TipoListaFilhos* filhos;

@@ -3,8 +3,25 @@
 #include <string.h>
 #include "funcoes.h"
 
+void leTexto(char texto[], int tamanhoTexto)
+//funcao que recebe string e controla o tamanho dela
+{
+    char dummy[tamanhoTexto + 1]; // com um caractere a mais do que o texto
+    fflush(stdin);
+    fgets(dummy, sizeof(dummy), stdin);
+    // O último caractere tem que ser '\n' para estar correto:
+    while(dummy[strlen(dummy) -1] != '\n')
+    {
+        printf("\nMaximo de %d caracteres, digite novamente\n-> ", tamanhoTexto - 1);
+        fflush(stdin);
+        fgets(dummy, sizeof(dummy), stdin); // le caracteres novamente
+    }
+    dummy[strlen(dummy) - 1]= '\0'; // sempre precisa substituir o '\n'
+    strcpy(texto, dummy); // transfere conteudo digitado sem o '\n'
+}
+
 void inicializaArquivo(){
-    MetaDados metaDados = {256, 32000, 0, 1}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
+    MetaDados metaDados = {TAMTABELA, TAMCLUSTER, 0, 1}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
     FILE *arq;                                //ponteiro para o arquivo
     //int bytesCluster = 0;
     char zero = 0;
@@ -20,15 +37,15 @@ void inicializaArquivo(){
         fwrite(&metaDados, sizeof(MetaDados), 1, arq);
         fwrite("\n", sizeof(char), 1, arq);
 
-        for(int j = 0; j < 256; j++){
+        for(int j = 0; j < TAMTABELA; j++){
             fwrite(&zero, sizeof(char), 1, arq);
         }
         fwrite("\n", sizeof(char), 1, arq);
 
         //Laco que a criacao dos 256 clusters
-        for(int m = 0; m < 255; m++){
+        for(int m = 0; m < TAMTABELA; m++){
             //Laco que controla a criacao de um cluster com 32KB, todos com 0
-            for(int i = 0; i < 32000; i++){
+            for(int i = 0; i < TAMCLUSTER; i++){
             fwrite(&zero, sizeof(char), 1, arq);
             }
             fwrite("\n", sizeof(char), 1, arq);
@@ -39,7 +56,7 @@ void inicializaArquivo(){
         fwrite(&valor255, sizeof(char), 1, arq);
 
         //Criacao do cluster root
-        fseek(arq, sizeof(MetaDados)+257, SEEK_SET);
+        fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 , SEEK_SET);
         fwrite("\n", sizeof(char), 1, arq);
         fwrite(&root, sizeof(NodoCluster), 1, arq);
     }
@@ -65,32 +82,10 @@ int pegaMetadados(MetaDados* metaDados){
     return 1;
 }
 
-void detectaComando(char comando[], int diretorioAtual, char tabela[], short int* sair){
-    if(strcmp(comando, "MKFILE") == 0){
-        printf("Arquivo Criado!\n");
-    }else if(strstr(comando, "MKDIR") != NULL){
-         if(mkDir(diretorioAtual, primeiraPosicaoDisponivel(tabela), tabela)){
-        printf("Diretorio Criado!\n");
-        }else{
-        printf("Erro ao criar o diretorio\n");
-        }
-    }else if(strstr(comando, "DIR") != NULL){
-        printf("Mostrar arquivos e diretorios\n");
-    }else if(strcmp(comando, "CD") == 0){
-        printf("Mudar o direorio\n");
-    }else if(strcmp(comando, "RM") == 0){
-        printf("Deletar arquivo/direorio\n");
-    }else if(strstr(comando, "EDIT") != NULL){
-        printf("Editar arquivo\n");
-    }else if(strcmp(comando, "MOVE") == 0){
-        printf("Mover diretorio/arquivo\n");
-    }else if(strcmp(comando, "RENAME") == 0){
-        printf("Renomear arquivo/diretorio\n");
-    }else if(strcmp(comando, "SAIR") == 0){
-        *sair = 1;
-    }else{
-        printf("Comando nao reconhecido.\n");
-    }
+void pegaOperacaoNome(char comando[], char* operacao, char* nome){
+/* Dado um comando do usuário, pega a operacao e o possível nome do diretório ou arquivo fornecido */
+    operacao = strtok(comando, " ");
+    nome = strtok(NULL, " ");
 }
 
 void pegaTabela(char tabela[]){
@@ -102,14 +97,13 @@ void pegaTabela(char tabela[]){
     }else{
         fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
         fwrite("\n", sizeof(char), 1, arq);
-        for(int i = 0; i < 256; i++){
+        for(int i = 0; i < TAMTABELA; i++){
             fread(&tabela[i], sizeof(char),1, arq);
         }
         fclose(arq);
     }
 
 }
-
 
 int primeiraPosicaoDisponivel(char tabela[]){
     int i = 0;
@@ -123,19 +117,21 @@ int primeiraPosicaoDisponivel(char tabela[]){
     return i;
 }
 
-
-int mkDir( int clusterPai, int cluster, char tabela[]){
+int mkDir(char* nome, int clusterPai, int cluster, char tabela[]){
+/* Cria um diretório no primeiro cluster disponível dado o diretório atual
+ * Retorna 1 caso seja realizado com sucesso
+ * Retorna 0 caso a criação falhe */
     //Ponteiro para o arquivo
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r+b");
     int i = 0;
-    NodoCluster novo = {"root", ".TXT", 0, NULL};
+    NodoCluster novo = {nome, "", 0, NULL};
 
     tabela[cluster] = 255;
 
-    fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
-    fwrite(tabela, sizeof(char)*256, 1, arq);
-    fseek(arq, sizeof(MetaDados)+257+(32001*cluster), SEEK_SET);
+    fseek(arq, sizeof(MetaDados) + 1, SEEK_SET);
+    fwrite(tabela, sizeof(char) * TAMTABELA, 1, arq);
+    fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * cluster), SEEK_SET);
     fwrite("\n", sizeof(char), 1, arq);
     i = fwrite(&novo, sizeof(NodoCluster), 1, arq);
     if(i == 0){
@@ -144,4 +140,38 @@ int mkDir( int clusterPai, int cluster, char tabela[]){
     }
     fclose(arq);
     return 1;
+}
+
+void detectaComando(char comando[], int diretorioAtual, char tabela[], short int* sair){
+/* Detecta os possíveis comandos exigidas pelo usuário,
+ * separando a operação do possível nome de diretórios e arquivos */
+    char *operacao = NULL, *nome = NULL;
+
+    pegaOperacaoNome(comando, operacao, nome);
+
+    if(strcmp(operacao, "MKFILE") == 0){
+        printf("Arquivo Criado!\n");
+    }else if(strstr(operacao, "MKDIR") != NULL){
+        if(nome != NULL && mkDir(nome, diretorioAtual, primeiraPosicaoDisponivel(tabela), tabela)){
+            printf("Diretorio Criado!\n");
+        }else{
+            printf("Erro ao criar o diretorio\n");
+        }
+    }else if(strstr(operacao, "DIR") != NULL){
+        printf("Mostrar arquivos e diretorios\n");
+    }else if(strcmp(operacao, "CD") == 0){
+        printf("Mudar o direorio\n");
+    }else if(strcmp(operacao, "RM") == 0){
+        printf("Deletar arquivo/direorio\n");
+    }else if(strstr(operacao, "EDIT") != NULL){
+        printf("Editar arquivo\n");
+    }else if(strcmp(operacao, "MOVE") == 0){
+        printf("Mover diretorio/arquivo\n");
+    }else if(strcmp(operacao, "RENAME") == 0){
+        printf("Renomear arquivo/diretorio\n");
+    }else if(strcmp(operacao, "SAIR") == 0){
+        *sair = 1;
+    }else{
+        printf("Comando nao reconhecido.\n");
+    }
 }
