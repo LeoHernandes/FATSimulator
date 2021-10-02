@@ -11,4 +11,4 @@ int pegaMetadados(MetaDados* metaDados);
 void pegaTabela(char tabela[]);
 
 int primeiraPosicaoDisponivel(char tabela[]);
-
+void pegaOperacaoNome(char comando[], char** operacao, char** nome);

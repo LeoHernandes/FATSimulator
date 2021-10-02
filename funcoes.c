@@ -82,10 +82,11 @@ int pegaMetadados(MetaDados* metaDados){
     return 1;
 }
 
-void pegaOperacaoNome(char comando[], char* operacao, char* nome){
+void pegaOperacaoNome(char comando[], char** operacao, char** nome){
 /* Dado um comando do usuário, pega a operacao e o possível nome do diretório ou arquivo fornecido */
-    operacao = strtok(comando, " ");
-    nome = strtok(NULL, " ");
+    *operacao = strtok(comando, " ");
+    *nome = strtok(NULL, " ");
+
 }
 
 void pegaTabela(char tabela[]){
@@ -127,12 +128,16 @@ int mkDir(char* nome, int clusterPai, int cluster, char tabela[]){
     int i = 0;
     NodoCluster novo = {nome, "", 0, NULL};
 
+    //Marca o primeiro cluster dispnível como ocupado e escreve no arquivo(talvez vire uma função)
     tabela[cluster] = 255;
-
     fseek(arq, sizeof(MetaDados) + 1, SEEK_SET);
     fwrite(tabela, sizeof(char) * TAMTABELA, 1, arq);
+
+    //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretório
     fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * cluster), SEEK_SET);
     fwrite("\n", sizeof(char), 1, arq);
+
+    //Escreve o cluster no arquivo
     i = fwrite(&novo, sizeof(NodoCluster), 1, arq);
     if(i == 0){
         fclose(arq);
@@ -147,7 +152,8 @@ void detectaComando(char comando[], int diretorioAtual, char tabela[], short int
  * separando a operação do possível nome de diretórios e arquivos */
     char *operacao = NULL, *nome = NULL;
 
-    pegaOperacaoNome(comando, operacao, nome);
+
+    pegaOperacaoNome(comando, &operacao, &nome);
 
     if(strcmp(operacao, "MKFILE") == 0){
         printf("Arquivo Criado!\n");
