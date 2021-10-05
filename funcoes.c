@@ -21,6 +21,13 @@ void leTexto(char texto[], int tamanhoTexto)
 }
 
 void inicializaArquivo(){
+/*
+        Inicializa o arquivo que simula o disco.
+        Cria uma área de metadados de 8 bytes
+        Cria uma áre de 256 bytes, que armazena a tabela fat
+        inicializa o cluster "root", tornando-o o principal.
+        inicializa os 255 clusters restantes de 32KB cada
+*/
     int i, j;
     MetaDados metaDados = {TAMTABELA, TAMCLUSTER, 0, 1}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
     FILE *arq;                                           //ponteiro para o arquivo
@@ -90,7 +97,11 @@ void pegaOperacaoNome(char comando[], char** operacao, char** nome){
 
 }
 
+
 void pegaTabela(char tabela[]){
+/*
+    Recebe um ponteiro para uma tabela de 256 bytes. Retorna a tabela fat que armazena os ponteiros dos discos.
+*/
     int i;
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r");
@@ -105,8 +116,10 @@ void pegaTabela(char tabela[]){
         fclose(arq);
     }
 }
-
 int primeiraPosicaoDisponivel(char tabela[]){
+/*
+    Retorna o ponteiro(linha) do pirmeiro cluster disponível
+*/
     int i = 0;
 
     while(i < 256 && tabela[i] != 0)
@@ -128,12 +141,9 @@ int mkDir(char* nome, int clusterPai, int cluster, char tabela[]){
     int i = 0;
 
     //Cria o novo Cluster
-    NodoCluster novo;
+    NodoCluster novo = {"", "", 'a','a', NULL};
     strcpy(novo.nome, nome);
-    strcpy(novo.extensao, " ");
-    novo.inicio = 'a';
-    novo.pai = 'a';
-    novo.filhos = NULL;
+
 
     //Marca o primeiro cluster dispnível como ocupado e escreve no arquivo(talvez vire uma função)
     tabela[cluster] = 255;
@@ -266,9 +276,13 @@ void detectaComando(char comando[], int diretorioAtual, char tabela[], short int
     }
 }
 
-void getList(ListaFilhos* ptNum){
+
+
+
+void getList(ListaFilhos* lf){
+    //Apagar a função depois
     ListaFilhos* aux;
-    for(aux = ptNum; aux!=NULL; aux = aux->prox){
+    for(aux = lf; aux!=NULL; aux = aux->prox){
     printf("%d ", aux->filho);
     }
 }
