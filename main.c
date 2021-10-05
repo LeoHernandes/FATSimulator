@@ -9,7 +9,7 @@
 int main()
 {
     char comando[TAMSTRING];       //variavel que armazena o comando do usuário
-    char tabela[2048];
+    char tabela[TAMTABELA];
     int diretorioAtual = 0;
     short int sair = 0;            //flag para manter o loop de escrita de comandos rodando
     MetaDados metaDados;
@@ -17,9 +17,6 @@ int main()
     inicializaArquivo();
     pegaTabela(tabela);
     pegaMetadados(&metaDados);
-
-    //Laco de execução
-    printf("%d", primeiraPosicaoDisponivel(tabela));
 
     do{
         printf(":\\>");

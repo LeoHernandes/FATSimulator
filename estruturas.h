@@ -11,16 +11,17 @@
 
 /* Lista simplesmente encadeada para armazenar todos os filhos (pastas e arquivos) de um nodo */
 typedef struct TipoListaFilhos{
-    struct TipoCluster* filho;
+    char filho;
     struct TipoListaFilhos* prox;
 }ListaFilhos;
 
 /* Árvore armazenando distribuição de arquivos e pastas num cluster */
 typedef struct TipoCluster{
-    char* nome;
-    char* extensao;
-    struct TipoCluster* pai;
-    struct TipoListaFilhos* filhos;
+    char nome[50];
+    char extensao[3];
+    char inicio;
+    char pai;
+    struct TipoListaFilhos *filhos;
 }NodoCluster;
 
 /* Estrutura com os metadados necessários */

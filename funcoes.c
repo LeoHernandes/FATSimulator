@@ -21,13 +21,13 @@ void leTexto(char texto[], int tamanhoTexto)
 }
 
 void inicializaArquivo(){
-    int i, j
+    int i, j;
     MetaDados metaDados = {TAMTABELA, TAMCLUSTER, 0, 1}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
     FILE *arq;                                           //ponteiro para o arquivo
     //int bytesCluster = 0;
     char zero = 0;
     char valor255 = 255;
-    NodoCluster root = {"root", "", 0, NULL};
+    NodoCluster root = {"root", "", 'a', 'a', NULL};
 
     arq = fopen("ArqDisco.bin", "r+b");
 
@@ -99,7 +99,6 @@ void pegaTabela(char tabela[]){
         printf("Problemas na abertura do arquivo\n");
     }else{
         fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
-        fwrite("\n", sizeof(char), 1, arq);
         for(i = 0; i < TAMTABELA; i++){
             fread(&tabela[i], sizeof(char),1, arq);
         }
@@ -127,11 +126,18 @@ int mkDir(char* nome, int clusterPai, int cluster, char tabela[]){
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r+b");
     int i = 0;
-    NodoCluster novo = {nome, "", 0, NULL};
+
+    //Cria o novo Cluster
+    NodoCluster novo;
+    strcpy(novo.nome, nome);
+    strcpy(novo.extensao, " ");
+    novo.inicio = 'a';
+    novo.pai = 'a';
+    novo.filhos = NULL;
 
     //Marca o primeiro cluster dispnível como ocupado e escreve no arquivo(talvez vire uma função)
     tabela[cluster] = 255;
-    fseek(arq, sizeof(MetaDados) + 1, SEEK_SET);
+    fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
     fwrite(tabela, sizeof(char) * TAMTABELA, 1, arq);
 
     //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretório
@@ -140,13 +146,84 @@ int mkDir(char* nome, int clusterPai, int cluster, char tabela[]){
 
     //Escreve o cluster no arquivo
     i = fwrite(&novo, sizeof(NodoCluster), 1, arq);
+    //Se deu erro durante a gravação, sai da função, retornando 0.
     if(i == 0){
         fclose(arq);
         return 0;
     }
+
     fclose(arq);
+    adicionaFilho(clusterPai, cluster);
     return 1;
 }
+
+void adicionaFilho(char pai, char filho){
+/*Insere um ponteiro, da tabela fat, na LSE de filhos do cluster "pai"
+    /Se a LSE de filhos do cluster pai está vazia, insere o filho na primeira posição
+    /Caso contrário, insere o filho na ultima posição da LSE.
+    /Recebe:
+    char, que representa o ponteiro(linha) do cluster pai
+    char, que representa o ponteiro(linha) do cluster filho.
+*/
+    ListaFilhos *lf, *aux;
+    NodoCluster dir;
+    FILE *arq;
+    arq = fopen("ArqDisco.bin", "r+b");
+
+    //Posiciona o ponteiro do arquivo na linha do cluster pai
+    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * pai), SEEK_SET);
+    fread(&dir, sizeof(NodoCluster), 1, arq);
+
+    //Aloca um espaço em memória para inserir um novo filho na LSE
+    lf = malloc(sizeof(ListaFilhos));
+    lf->filho = filho;
+
+    //Se a LSE dos filhos é NULL, então insere o filho na primeira posição da LSE
+    if(dir.filhos == NULL){
+        lf->prox = NULL;
+        dir.filhos = lf;
+    }else{//Caso contrário, percorre a LSE até o final e insere o filho no fim.
+    aux = dir.filhos;
+    while(aux->prox != NULL){
+           aux = aux->prox;
+    }
+    aux->prox = lf;
+    lf->prox = NULL;
+    }
+    //Grava a atualização feita na LSE dos filhos.
+    fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * pai), SEEK_SET);
+    fwrite("\n", sizeof(char), 1, arq);
+    fwrite(&dir, sizeof(NodoCluster), 1, arq);
+    fclose(arq);
+}
+
+void dir(char pai){
+/*
+Lista todos os subdiretorios e arquivos de um diretorio principal
+    Recebe:
+    char, que representa o diretorio principal
+*/
+    FILE *arq;
+    arq = fopen("ArqDisco.bin", "r+b");
+    ListaFilhos *aux;
+    NodoCluster dir, subdir;
+    //Posiciona o cursor do arquivo no ponteiro(linha) que representa o diretório principal.
+    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * pai), SEEK_SET);
+    fread(&dir, sizeof(NodoCluster), 1, arq);
+
+    aux = dir.filhos;
+    //Laço que percorre a LSE de filhos, printando-os, até chegar ao final da mesma.
+     while(aux != NULL){
+        fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * aux->filho), SEEK_SET);
+        fread(&subdir, sizeof(NodoCluster), 1, arq);
+        printf("%s  ", subdir.nome);
+        aux = aux->prox;
+    }
+    printf("\n");
+
+
+}
+
 
 void detectaComando(char comando[], int diretorioAtual, char tabela[], short int* sair){
 /* Detecta os possíveis comandos exigidas pelo usuário,
@@ -156,6 +233,13 @@ void detectaComando(char comando[], int diretorioAtual, char tabela[], short int
     pegaOperacaoNome(comando, &operacao, &nome);
 
     if(strcmp(operacao, "MKFILE") == 0){
+    FILE *arq;
+    arq = fopen("ArqDisco.bin", "r+b");
+    NodoCluster dir;
+    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * 0), SEEK_SET);
+    fread(&dir, sizeof(NodoCluster), 1, arq);
+    fclose(arq);
+        getList(dir.filhos);
         printf("Arquivo Criado!\n");
     }else if(strstr(operacao, "MKDIR") != NULL){
         if(nome != NULL && mkDir(nome, diretorioAtual, primeiraPosicaoDisponivel(tabela), tabela)){
@@ -164,7 +248,7 @@ void detectaComando(char comando[], int diretorioAtual, char tabela[], short int
             printf("Erro ao criar o diretorio\n");
         }
     }else if(strstr(operacao, "DIR") != NULL){
-        printf("Mostrar arquivos e diretorios\n");
+        dir(diretorioAtual);
     }else if(strcmp(operacao, "CD") == 0){
         printf("Mudar o direorio\n");
     }else if(strcmp(operacao, "RM") == 0){
@@ -179,5 +263,12 @@ void detectaComando(char comando[], int diretorioAtual, char tabela[], short int
         *sair = 1;
     }else{
         printf("Comando nao reconhecido.\n");
+    }
+}
+
+void getList(ListaFilhos* ptNum){
+    ListaFilhos* aux;
+    for(aux = ptNum; aux!=NULL; aux = aux->prox){
+    printf("%d ", aux->filho);
     }
 }
