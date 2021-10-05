@@ -15,6 +15,12 @@ typedef struct TipoListaFilhos{
     struct TipoListaFilhos* prox;
 }ListaFilhos;
 
+typedef struct TipoListaStrings{
+    char *comando;
+    struct TipoListaStrings *prox;
+
+}ListaStrings;
+
 /* Árvore armazenando distribuição de arquivos e pastas num cluster */
 typedef struct TipoCluster{
     char nome[50];
