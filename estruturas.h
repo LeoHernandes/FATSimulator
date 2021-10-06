@@ -4,6 +4,7 @@
 
 #define TAMCLUSTER 32000
 #define TAMTABELA  256
+#define REALLOCSIZE 16
 
 /*------------*/
 /* ESTRUTURAS */

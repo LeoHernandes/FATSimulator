@@ -12,21 +12,19 @@ int main()
     int diretorioAtual = 0;
     int *p = &diretorioAtual;
     short int sair = 0;            //flag para manter o loop de escrita de comandos rodando
-    MetaDados metaDados;
-
 
     inicializaArquivo();
-    pegaTabela(tabela);
-    pegaMetadados(&metaDados);
-
-    do{
-    NodoCluster dir = pegaCluster(diretorioAtual);
-        printf("%s:\\>", dir.nome);
-        m = (char*) inputString(stdin, 10);
-        fflush(stdin);
-        detectaComando(m, p, tabela, &sair);
-
-    }while(!sair);
+    if(pegaTabela(tabela)){
+        do{
+            NodoCluster dir = pegaCluster(diretorioAtual);
+            printf("%s:\\>", dir.nome);
+            m = (char*) stringEntrada(stdin, TAMSTRING);
+            fflush(stdin);
+            detectaComando(m, p, tabela, &sair);
+        }while(!sair);
+    }else{
+        printf("Nao foi possivel ler a tabela de ponteiros\n");
+    }
 
     return 0;
 }
