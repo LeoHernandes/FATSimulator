@@ -5,7 +5,7 @@
 #define TAMCLUSTER  32000
 #define TAMTABELA   256
 #define INITABELA   4
-#define INITCLUSTER 230
+#define INITCLUSTER 260
 #define REALLOCSIZE 16
 
 /*------------*/
