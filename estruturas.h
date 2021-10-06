@@ -4,6 +4,7 @@
 
 #define TAMCLUSTER 32000
 #define TAMTABELA  256
+#define REALLOCSIZE 16
 
 /*------------*/
 /* ESTRUTURAS */
@@ -14,6 +15,12 @@ typedef struct TipoListaFilhos{
     char filho;
     struct TipoListaFilhos* prox;
 }ListaFilhos;
+
+typedef struct TipoListaStrings{
+    char *comando;
+    struct TipoListaStrings *prox;
+
+}ListaStrings;
 
 /* Árvore armazenando distribuição de arquivos e pastas num cluster */
 typedef struct TipoCluster{
