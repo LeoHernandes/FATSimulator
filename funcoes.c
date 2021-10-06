@@ -18,7 +18,7 @@ void inicializaArquivo(){
     char valor255 = 255;
     NodoCluster root = {"root", "", 'a', 'a', NULL};
 
-    arq = fopen("ArqDisco.bin", "r+b");
+    arq = fopen("ArqDisco.bin", "a+b");
 
     if (arq == NULL){
         printf("Problemas na criacao do arquivo\n");

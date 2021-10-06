@@ -2,8 +2,10 @@
 /* CONSTANTES */
 /*------------*/
 
-#define TAMCLUSTER 32000
-#define TAMTABELA  256
+#define TAMCLUSTER  32000
+#define TAMTABELA   256
+#define INITABELA   4
+#define INITCLUSTER 230
 #define REALLOCSIZE 16
 
 /*------------*/
@@ -34,7 +36,7 @@ typedef struct TipoCluster{
 /* Estrutura com os metadados necessários */
 typedef struct TipoMetaDados{
     short int tamIndice;
-    short int tamCluster; //em KB
-    short int initIndice; //em byte
+    short int tamCluster;  //em KB
+    short int initIndice;  //em byte
     short int initCluster; //em byte
 }MetaDados;
