@@ -180,9 +180,7 @@ int mkDir(char* nome, int clusterPai, int cluster, char tabela[]){
 
 
     //Marca o primeiro cluster dispnível como ocupado e escreve no arquivo(talvez vire uma função)
-    tabela[cluster] = 255;
-    fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
-    fwrite(tabela, sizeof(char) * TAMTABELA, 1, arq);
+    alteraTabelaFat(tabela, cluster);
 
     //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretório
     fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * cluster), SEEK_SET);
@@ -405,4 +403,35 @@ NodoCluster pegaCluster(int ponteiroCluster){
 
     return dir;
 }
+
+int insereNodoCluster(NodoCluster nodoCluster, int ponteiroCluster){
+    NodoCluster dir;
+    FILE *arq;
+    arq = fopen("ArqDisco.bin", "r+b");
+
+    fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * ponteiroCluster), SEEK_SET);
+    fwrite("\n", sizeof(char), 1, arq);
+
+
+    if(fwrite(&dir, sizeof(NodoCluster), 1, arq)){
+        fclose(arq);
+        return 1;
+    }else{
+        fclose(arq);
+        return 0;
+    }
+}
+int alteraTabelaFat(char tabela[], int ponteiroCluster){
+  NodoCluster dir;
+    FILE *arq;
+    arq = fopen("ArqDisco.bin", "r+b");
+
+    tabela[ponteiroCluster] = 255;
+    fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
+    fwrite(tabela, sizeof(char) * TAMTABELA, 1, arq);
+
+
+    fclose(arq);
+}
+
 

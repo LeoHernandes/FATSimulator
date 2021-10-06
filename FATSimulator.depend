@@ -31,3 +31,19 @@
 
 1633528602 c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\estruturas.h
 
+1633476615 source:c:\users\bruno\documents\ere\terceiro semestre\arq ii\t2\nova\fatsimulator\funcoes.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	"funcoes.h"
+
+1633476615 c:\users\bruno\documents\ere\terceiro semestre\arq ii\t2\nova\fatsimulator\funcoes.h
+	"estruturas.h"
+
+1633476615 c:\users\bruno\documents\ere\terceiro semestre\arq ii\t2\nova\fatsimulator\estruturas.h
+
+1633476615 source:c:\users\bruno\documents\ere\terceiro semestre\arq ii\t2\nova\fatsimulator\main.c
+	<stdio.h>
+	<stdlib.h>
+	"funcoes.h"
+
