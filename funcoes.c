@@ -16,15 +16,11 @@ void inicializaArquivo(){
     //int bytesCluster = 0;
     char zero = 0;
     char valor255 = 255;
-    NodoCluster root = {"root", "", 'a', 'a', NULL};
-    int arquivoExiste = 0;
+    NodoCluster root = {"root", "", 'a', 'a', '*'};
 
-    arq = fopen("ArqDisco.bin", "r+b");
+    if(fopen("ArqDisco.bin", "r") == NULL){
 
-    if (arq == NULL){
-        printf("Problemas na criacao do arquivo\n");
-        return;
-    }else{
+    arq = fopen("ArqDisco.bin", "w");
         fwrite(&metaDados, sizeof(MetaDados), 1, arq);
         fwrite("\n", sizeof(char), 1, arq);
 
@@ -41,6 +37,9 @@ void inicializaArquivo(){
             }
             fwrite("\n", sizeof(char), 1, arq);
         }
+        fclose(arq);
+
+        arq = fopen("ArqDisco.bin", "r+b");
 
         fseek(arq, sizeof(MetaDados), SEEK_SET);
         fwrite("\n", sizeof(char), 1, arq);
@@ -50,8 +49,12 @@ void inicializaArquivo(){
         fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 , SEEK_SET);
         fwrite("\n", sizeof(char), 1, arq);
         fwrite(&root, sizeof(NodoCluster), 1, arq);
-    }
+
     fclose(arq);
+
+    }
+
+
 }
 
 int pegaMetadados(MetaDados* metaDados){
@@ -124,7 +127,7 @@ int primeiraPosicaoDisponivel(char tabela[]){
     return i;
 }
 
-void adicionaFilho(char pai, char filho){
+void adicionaFilho(char pai, char *filho){
 /* Insere um ponteiro, da tabela fat, na LSE de filhos do cluster "pai"
  * Se a LSE de filhos do cluster pai está vazia, insere o filho na primeira posição
  * Caso contrário, insere o filho na ultima posição da LSE.
@@ -136,35 +139,25 @@ void adicionaFilho(char pai, char filho){
     NodoCluster dir;
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r+b");
-
-    //Posiciona o ponteiro do arquivo na linha do cluster pai
+    char a = 0;
+    int b = 0;
+    //Posiciona o ponteiro do arquivo no cluster onde será inserido um filho
     fseek(arq, sizeof(MetaDados) + 1 + TAMTABELA + 1  + ((TAMCLUSTER + 1) * pai), SEEK_SET);
-    fread(&dir, sizeof(NodoCluster), 1, arq);
-
-    //Aloca um espaço em memória para inserir um novo filho na LSE
-    lf = malloc(sizeof(ListaFilhos));
-    lf->filho = filho;
-
-    //Se a LSE dos filhos é NULL, então insere o filho na primeira posição da LSE
-    if(dir.filhos == NULL){
-        lf->prox = NULL;
-        dir.filhos = lf;
-    }else{//Caso contrário, percorre a LSE até o final e insere o filho no fim.
-        aux = dir.filhos;
-        while(aux->prox != NULL){
-           aux = aux->prox;
-        }
-        aux->prox = lf;
-        lf->prox = NULL;
+    //Percorre todos os caracteres do cluster até encontrar o marcador '*'
+    while(a != '*'){
+        a = fgetc(arq);
     }
-    //Grava a atualização feita na LSE dos filhos.
-    fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * pai), SEEK_SET);
-    fwrite("\n", sizeof(char), 1, arq);
-    fwrite(&dir, sizeof(NodoCluster), 1, arq);
+    //Percorre, a partir do marcador '*', até encontrar o primeira posição livre para inserir o ponteiro do filho
+    while(a != 0){
+        a = fgetc(arq);
+    }
+    //insere o ponteiro do filho na lista de filhos do pai
+    fseek(arq, -1, SEEK_CUR);
+    fwrite(&filho, sizeof(char), 1, arq);
     fclose(arq);
 }
 
-int mkDir(char* nome, int clusterPai, int cluster, char tabela[]){
+int mkDir(char* nome, char clusterPai, char cluster, char tabela[]){
 /* Cria um diretório no primeiro cluster disponível dado o diretório atual
  * Retorna 1 caso seja realizado com sucesso
  * Retorna 0 caso a criação falhe
@@ -175,7 +168,7 @@ int mkDir(char* nome, int clusterPai, int cluster, char tabela[]){
     int i = 0;
 
     //Cria o novo Cluster
-    NodoCluster novo = {"", "", 'a','a', NULL};
+    NodoCluster novo = {"", "", 'a','a', '*'};
     strcpy(novo.nome, nome);
     novo.pai = clusterPai;
 
@@ -201,31 +194,44 @@ int mkDir(char* nome, int clusterPai, int cluster, char tabela[]){
 }
 
 void dir(char pai){
-/* Lista todos os subdiretorios e arquivos de um diretorio principal
- * Recebe:
- *   char, que representa o diretorio principal
+/*
+    char* ->
+    Recebe um char, que representa o ponteiro da pasta que queremos exibir os arquivos e diretórios
+    Lista todos os subdiretorios e arquivos de um diretorio principal
  */
 
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r+b");
-    ListaFilhos *aux;
-    NodoCluster dir, subdir;
-    //Posiciona o cursor do arquivo no ponteiro(linha) que representa o diretório principal.
+    NodoCluster dir, cluster;
+    char a = 0;
+    long i = 0;
+    //Posiciona o cursor do arquivo no cluster que desejamos listar as informações
     fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * pai), SEEK_SET);
-    fread(&dir, sizeof(NodoCluster), 1, arq);
 
-    aux = dir.filhos;
-    if(aux == NULL){
-        printf("<vazio>");
+    //percorre o cluster até encontrar o marcador '*'
+    while(a != '*'){
+        a = fgetc(arq);
     }
+        a = fgetc(arq);
+    //Verifica se a lista de filhos do cluster está vazia.
+    if(a == 0){
+        printf("<vazio>");
+    }else{//Se não, percorre a lista de filhos até o final e printa os nomes na tela.
+        while(a != 0){
+            //guarda a posição do filho atual
+            i = ftell(arq);
+            //Pega o cluster que está na lista de filhos
+            cluster = pegaCluster(a);
+            printf("%s  ", cluster.nome);
+            //retorna para a lista de filhos
+            fseek(arq, i, SEEK_SET);
+            a = fgetc(arq);
+        }
+    }
+
     //Laço que percorre a LSE de filhos, printando-os, até chegar ao final da mesma.
 
-     while(aux != NULL){
-        fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * aux->filho), SEEK_SET);
-        fread(&subdir, sizeof(NodoCluster), 1, arq);
-        printf("%s  ", subdir.nome);
-        aux = aux->prox;
-    }
+
     fclose(arq);
     printf("\n");
 
@@ -295,41 +301,74 @@ ListaStrings* pegaSequenciaComandos(char *comando, ListaStrings *lc){
     return lc;
 }
 
-int percorreFilhos(ListaFilhos *lf, ListaStrings *listaComandos, int *diretorioAtual){
-/* ListaFilhos*, ListaStrings*, int* -> int.
+int cd(ListaStrings *listaComandos, char *diretorioAtual, char subdir){
+/* ListaStrings*, char*, char -> int.
  * Dado uma lista de filhos de um diretório, uma lista de strings, que representa o caminho
  * de um diretório/arquivo e o um int, que representa o diretório em que foi realizado uma operação.
  * Retorna 1 caso o caminho não tenha sido encontrado
  * Retorna 0 caso o caminho tenha sido encontrado
- */
+*/
     NodoCluster dir;
-    ListaFilhos *aux;
-    aux = lf;
-
+    char a = 0;
+    long i = 0;
     //Pega o diretório atual do disco
-    dir = pegaCluster(*diretorioAtual);
+    FILE *arq;
+    arq = fopen("ArqDisco.bin", "r+b");
+    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * *diretorioAtual), SEEK_SET);
+    fread(&dir, sizeof(NodoCluster), 1, arq);
+    //Posiciona o ponteiro no cluster atual
+    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * subdir), SEEK_SET);
+
+    //Verifica se a lista de comando é vazia
     if(listaComandos == NULL){
+        fclose(arq);
         return 1;
-    }else if(strcmp(listaComandos->comando, "..") == 0 && *diretorioAtual != 0){
-        *diretorioAtual = dir.pai;
-        return 0;
+    }else if(strcmp(listaComandos->comando, "..") == 0){//Verifica se o comando digitado foi o de "voltar"
+        if(*diretorioAtual != 0){//Se o diretório atual é diferente do root, volta para a pasta "pai"
+            *diretorioAtual = dir.pai;
+            return 0;
+        }else{//Se não, fecha o arquivo e retorna 1, indicando erro.
+            fclose(arq);
+            return 1;
+        }
     }
-    while(aux != NULL){
-    //Pega o diretório do respectivo filho
-    dir = pegaCluster(aux->filho);
-        //Verifica se o nome do diretório do respectivo filho é igual ao que está na primeira posição da lista de comandos
-        if(strcmp(listaComandos->comando, dir.nome) == 0){
-            //Se sim, verifica se o próximo elemento da lista de comandos é NULL
+    //Se nenhuma das opções acima for satisfeita, inicia a busca, com recursão, até encontar, ou não, o caminho solicitado
+    //Encontra o marcador de inicio da lista de filhos
+    while(a != '*'){
+        a = fgetc(arq);
+    }
+    a = fgetc(arq);
+    //Se o primeiro filho for igual a zero, a pasta pai não tem filho
+    if(a == 0){
+        //Fecha o arquivo e retorna 1, indicando erro.
+        fclose(arq);
+        return 1;
+    }else{//Se não, busca se há uma pasta com o nome solicitado no caminho indicado
+        while(a != 0){
+            //guarda a posição atual na lista de filhos
+            i = ftell(arq);
+            //pega o cluster indicado pelo filho
+            dir = pegaCluster(a);
+            //Verifica se o nome da psta encontrada na lista de filhos possui o mesmo nome do caminho solicitado
+             if(strcmp(listaComandos->comando, dir.nome) == 0){
+            //Se sim, verifica se o próximo elemento da lista de comandos é 0
             if(listaComandos->prox == NULL){
                 //Caso seja, seta o diretório buscado como atual e retorna 0
-                *diretorioAtual = aux->filho;
+                *diretorioAtual = a;
+                fclose(arq);
                 return 0;
-            }else{//Se o próximo elemento da lista de comandos não é NULL, chama a função recursivamente.
-            return percorreFilhos(dir.filhos, listaComandos->prox, diretorioAtual);
+            }else{//Se o próximo elemento da lista de comandos não é 0, chama a função recursivamente.
+            return cd(listaComandos->prox, diretorioAtual, a);
             }
         }
-        aux = aux->prox;
+        fseek(arq, i, SEEK_SET);
+        a = fgetc(arq);
+        }
     }
+
+
+
+    fclose(arq);
     return 1;
 }
 
@@ -345,7 +384,8 @@ ListaStrings* apagaLSE(ListaStrings* ptNum){
         free(aux);
     }
     return NULL;
-}
+}
+
 void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sair){
 /* Detecta os possíveis comandos exigidas pelo usuário,
  * separando a operação do possível nome de diretórios e arquivos */
@@ -370,7 +410,7 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
         dir = pegaCluster(*dirAtual);
         listaComandos = NULL;
         listaComandos = pegaSequenciaComandos(nome, listaComandos);
-        if(percorreFilhos(dir.filhos, listaComandos, dirAtual)%2 != 0){
+        if(cd(listaComandos, dirAtual, *dirAtual)%2 != 0){
             printf("Caminho nao encontrado\n");
         }
         apagaLSE(listaComandos);

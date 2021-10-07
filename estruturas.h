@@ -30,7 +30,7 @@ typedef struct TipoCluster{
     char extensao[3];
     char inicio;
     char pai;
-    struct TipoListaFilhos *filhos;
+    char marcador;
 }NodoCluster;
 
 /* Estrutura com os metadados necessários */
