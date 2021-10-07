@@ -17,8 +17,9 @@ void inicializaArquivo(){
     char zero = 0;
     char valor255 = 255;
     NodoCluster root = {"root", "", 'a', 'a', NULL};
+    int arquivoExiste = 0;
 
-    arq = fopen("ArqDisco.bin", "a+b");
+    arq = fopen("ArqDisco.bin", "r+b");
 
     if (arq == NULL){
         printf("Problemas na criacao do arquivo\n");
@@ -88,7 +89,7 @@ int pegaTabela(char tabela[]){
  * Caso a leia a tabela no arquivo com sucesso, devolve 1.
  * Caso falhe na leitura, devolve 0.
  */
-    int i;
+    int i = 0;
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r");
 
@@ -204,6 +205,7 @@ void dir(char pai){
  * Recebe:
  *   char, que representa o diretorio principal
  */
+
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r+b");
     ListaFilhos *aux;
@@ -217,12 +219,14 @@ void dir(char pai){
         printf("<vazio>");
     }
     //Laço que percorre a LSE de filhos, printando-os, até chegar ao final da mesma.
+
      while(aux != NULL){
         fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * aux->filho), SEEK_SET);
         fread(&subdir, sizeof(NodoCluster), 1, arq);
         printf("%s  ", subdir.nome);
         aux = aux->prox;
     }
+    fclose(arq);
     printf("\n");
 
 
