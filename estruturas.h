@@ -21,7 +21,6 @@ typedef struct TipoListaFilhos{
 typedef struct TipoListaStrings{
     char *comando;
     struct TipoListaStrings *prox;
-
 }ListaStrings;
 
 /* Árvore armazenando distribuição de arquivos e pastas num cluster */

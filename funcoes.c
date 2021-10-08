@@ -17,7 +17,7 @@ int inicializaArquivo(){
     char zero = 0, FF = 255;
     FILE *arq;                                                             //ponteiro para o arquivo
     MetaDados metaDados = {TAMTABELA, TAMCLUSTER, INITABELA, INITCLUSTER}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
-    NodoCluster root = {"root", "", 'a', NULL};
+    NodoCluster root = {"root", "", 'a', '*'};
 
     if((arq = fopen("ArqDisco.bin", "a+b")) == NULL){  //se houve problema na abertura do arquivo
         printf("Erro na criacao do arquivo!\n");
@@ -36,6 +36,9 @@ int inicializaArquivo(){
 
     //Laco que faz a criacao dos 256 clusters
     fwrite(&root, sizeof(NodoCluster), 1, arq);         //armazena o root no primeiro cluster
+    for(i = 0; i < (TAMCLUSTER - sizeof(NodoCluster)); i++)
+        fwrite(&zero, sizeof(char), 1, arq);
+
     for(i = 0; i < TAMTABELA - 1; i++){
         fwrite("\n", sizeof(char), 1, arq);
         for(j = 0; j < TAMCLUSTER; j++)
@@ -146,7 +149,6 @@ int alteraTabelaFat(char tabela[], int ponteiroCluster){
  *      1 caso escreva com sucesso.
  *      0 caso haja falha na escrita.
  */
-
     FILE *arq;
 
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
@@ -170,13 +172,15 @@ int adicionaFilho(char pai, char filho){
 /* Insere um ponteiro, da tabela fat, na LSE de filhos do cluster "pai"
  * Se a LSE de filhos do cluster pai está vazia, insere o filho na primeira posição
  * Caso contrário, insere o filho na ultima posição da LSE.
- * Recebe:
+ * Entrada:
  *   char, que representa o ponteiro(linha) do cluster pai
  *   char, que representa o ponteiro(linha) do cluster filho.
  * Retorno:
  *   1, caso haja sucesso na escrita da nova lista de filhos
  *   0, caso falhe na escrita
  */
+    int b = 0;
+    char a = 0;
     ListaFilhos *lf, *aux;
     NodoCluster dir;
     FILE *arq;
@@ -186,19 +190,19 @@ int adicionaFilho(char pai, char filho){
         return 0;
     }
 
-    //Posiciona o ponteiro do arquivo na linha do cluster pai
-    char a = 0;
-    int b = 0;
     //Posiciona o ponteiro do arquivo no cluster onde será inserido um filho
     fseek(arq, sizeof(MetaDados) + 1 + TAMTABELA + 1  + ((TAMCLUSTER + 1) * pai), SEEK_SET);
+
     //Percorre todos os caracteres do cluster até encontrar o marcador '*'
     while(a != '*'){
         a = fgetc(arq);
     }
+
     //Percorre, a partir do marcador '*', até encontrar o primeira posição livre para inserir o ponteiro do filho
     while(a != 0){
         a = fgetc(arq);
     }
+
     //insere o ponteiro do filho na lista de filhos do pai
     fseek(arq, -1, SEEK_CUR);
     fwrite(&filho, sizeof(char), 1, arq);
@@ -221,7 +225,7 @@ int mkDir(char* nome, char clusterPai, char cluster, char tabela[]){
     int i = 0;
 
     //Cria o novo Cluster
-    NodoCluster novo = {"", "", 'a', NULL};
+    NodoCluster novo = {"", "", 'a', '*'};
     strcpy(novo.nome, nome);
     novo.pai = clusterPai;
 

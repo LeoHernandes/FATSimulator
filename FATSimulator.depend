@@ -1,13 +1,13 @@
 # depslib dependency file v1.0
-1633530451 source:c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\main.c
+1633713901 source:c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\main.c
 	<stdio.h>
 	<stdlib.h>
 	"funcoes.h"
 
-1633530272 c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\funcoes.h
+1633713456 c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\funcoes.h
 	"estruturas.h"
 
-1633530293 source:c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\funcoes.c
+1633733831 source:c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\funcoes.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
@@ -29,7 +29,7 @@
 
 1632872873 c:\users\bruno\documents\ere\terceiro semestre\arq ii\t2\fatsimulator\estruturas.h
 
-1633528602 c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\estruturas.h
+1633732814 c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\estruturas.h
 
 1633476615 source:c:\users\bruno\documents\ere\terceiro semestre\arq ii\t2\nova\fatsimulator\funcoes.c
 	<stdio.h>
