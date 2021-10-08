@@ -52,20 +52,24 @@ int inicializaArquivo(){
 
 int pegaMetadados(MetaDados* metaDados){
 /* Carrega os metadados do arquivo de disco se possível
- * Devolve 1 se a operação for feita com sucesso
- * Devolve 0 se a operação falhar */
+ * Entrada:
+ *      Ponteiro para estrutura de metadados para preencher
+ * Retorno:
+ *      1 se a operação for feita com sucesso
+ *      0 se a operação falhar
+ */
     FILE *arq;
     arq = fopen("ArqDisco.bin", "rb+");
 
     //Se houve erro na abertura
     if (arq == NULL){
-        printf("Problemas na abertura do arquivo\n");
+        printf("Erro na abertura do arquivo\n");
         return 0;
     }
 
     //se houve erro na leitura
     if(fread(metaDados, sizeof(MetaDados), 1, arq) != 1){
-        printf("Problemas na leitura do arquivo\n");
+        printf("Erro na leitura do arquivo\n");
         fclose(arq);
         return 0;
     }
@@ -74,23 +78,30 @@ int pegaMetadados(MetaDados* metaDados){
 }
 
 void pegaOperacaoNome(char comando[], char** operacao, char** nome){
-/* Dado um comando do usuário, pega a operacao e o possível nome do diretório ou arquivo fornecido */
+/* Dado um comando do usuario, pega a operacao e o possível nome do diretorio ou arquivo fornecido
+ * Entrada:
+ *      String do comando todo fornecido pelo usuário
+ *      Ponteiro para a string que armazena a operação
+ *      Ponteiro para a string que armazena o nome do diretorio ou arquivo
+ */
     *operacao = strtok(comando, " ");
     *nome = strtok(NULL, " ");
 }
 
 int pegaTabela(char tabela[]){
-/* Recebe um ponteiro para uma tabela de 256 bytes.
- * Retorna por parâmetro a tabela fat que armazena os ponteiros dos discos.
- * Caso a leia a tabela no arquivo com sucesso, devolve 1.
- * Caso falhe na leitura, devolve 0.
+/* Carrega para a memória a tabela FAT do arquivo.
+ * Entrada:
+ *      Tabela FAT que armazena os ponteiros dos discos
+ * Retorno:
+ *      1 caso leia a tabela no arquivo com sucesso
+ *      0 caso falhe na leitura
  */
     int i = 0;
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r");
 
     if (arq == NULL){ // Se houve erro na abertura{
-        printf("Problemas na abertura do arquivo\n");
+        printf("Erro na abertura do arquivo\n");
         return 0;
     }
 
@@ -101,27 +112,36 @@ int pegaTabela(char tabela[]){
     fclose(arq);
 
     if(i != TAMTABELA){  //se nao chegou no final da tabela
-        printf("Problemas na leitura do arquivo\n");
+        printf("Erro na leitura do arquivo\n");
         return 0;
     }
     return 1;
 }
 
 int primeiraPosicaoDisponivel(char tabela[]){
-/* Retorna o ponteiro(linha) do pirmeiro cluster disponível */
+/* Retorna o ponteiro(linha) do pirmeiro cluster disponível
+ * Entrada:
+ *      Tabela FAT que armazena os ponteiros dos discos
+ * Retorno:
+ *      Inteiro positivo representando a linha disponível
+ *      -1 caso não haja cluster disponível
+ */
     int i = 0;
 
     while(i < 256 && tabela[i] != 0)
         i++;
 
     if(i == 256)
-        i = 0;
+        i = -1;
 
     return i;
 }
 
 int alteraTabelaFat(char tabela[], int ponteiroCluster){
-/* Escreve a tabela modificada no arquivo
+/* Atualiza a tabela e escreve a tabela modificada no arquivo
+ * Entrada:
+ *      Tabela FAT que armazena os ponteiros dos discos
+ *      Inteiro que presenta o cluster a ser atualizado na tabela
  * Retorno:
  *      1 caso escreva com sucesso.
  *      0 caso haja falha na escrita.
@@ -135,7 +155,7 @@ int alteraTabelaFat(char tabela[], int ponteiroCluster){
     }
 
     tabela[ponteiroCluster] = 255;
-    fseek(arq, sizeof(MetaDados)+1, SEEK_SET);
+    fseek(arq, sizeof(MetaDados) + 1, SEEK_SET);
     fwrite(tabela, sizeof(char) * TAMTABELA, 1, arq);
 
     fclose(arq);
@@ -146,18 +166,25 @@ int alteraTabelaFat(char tabela[], int ponteiroCluster){
     return 1;
 }
 
-void adicionaFilho(char pai, char filho){
+int adicionaFilho(char pai, char filho){
 /* Insere um ponteiro, da tabela fat, na LSE de filhos do cluster "pai"
  * Se a LSE de filhos do cluster pai está vazia, insere o filho na primeira posição
  * Caso contrário, insere o filho na ultima posição da LSE.
  * Recebe:
  *   char, que representa o ponteiro(linha) do cluster pai
  *   char, que representa o ponteiro(linha) do cluster filho.
+ * Retorno:
+ *   1, caso haja sucesso na escrita da nova lista de filhos
+ *   0, caso falhe na escrita
  */
     ListaFilhos *lf, *aux;
     NodoCluster dir;
     FILE *arq;
-    arq = fopen("ArqDisco.bin", "r+b");
+
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
 
     //Posiciona o ponteiro do arquivo na linha do cluster pai
     fseek(arq, sizeof(MetaDados) + 1 + TAMTABELA + 1  + ((TAMCLUSTER + 1) * pai), SEEK_SET);
@@ -183,7 +210,13 @@ void adicionaFilho(char pai, char filho){
     fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * pai), SEEK_SET);
     fwrite("\n", sizeof(char), 1, arq);
     fwrite(&dir, sizeof(NodoCluster), 1, arq);
+
     fclose(arq);
+    if(ferror(arq)){
+        printf("Erro na escrita do arquivo\n");
+        return 0;
+    }
+    return 1;
 }
 
 int mkDir(char* nome, int clusterPai, int cluster, char tabela[]){
