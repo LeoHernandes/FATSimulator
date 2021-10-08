@@ -2,7 +2,7 @@
 
 void leTexto(char texto[], int tamanhoTexto);
 
-void inicializaArquivo();
+int inicializaArquivo();
 
 void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sair);
 
