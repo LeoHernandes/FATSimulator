@@ -179,10 +179,7 @@ int adicionaFilho(char pai, char filho){
  *   1, caso haja sucesso na escrita da nova lista de filhos
  *   0, caso falhe na escrita
  */
-    int b = 0;
     char a = 0;
-    ListaFilhos *lf, *aux;
-    NodoCluster dir;
     FILE *arq;
 
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
@@ -259,7 +256,7 @@ void dir(char pai){
 
     FILE *arq;
     arq = fopen("ArqDisco.bin", "r+b");
-    NodoCluster dir, cluster;
+    NodoCluster cluster;
     char a = 0;
     long i = 0;
     //Posiciona o cursor do arquivo no cluster que desejamos listar as informações
@@ -358,7 +355,7 @@ ListaStrings* pegaSequenciaComandos(char *comando, ListaStrings *lc){
     return lc;
 }
 
-int cd(ListaStrings *listaComandos, char *diretorioAtual, char subdir){
+int cd(ListaStrings *listaComandos, int *diretorioAtual, char subdir){
 /* ListaStrings*, char*, char -> int.
  * Dado uma lista de filhos de um diretório, uma lista de strings, que representa o caminho
  * de um diretório/arquivo e o um int, que representa o diretório em que foi realizado uma operação.
@@ -447,9 +444,7 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
 /* Detecta os possíveis comandos exigidas pelo usuário,
  * separando a operação do possível nome de diretórios e arquivos */
     char *operacao = NULL, *nome = NULL;
-
     ListaStrings *listaComandos;
-
     pegaOperacaoNome(comando, &operacao, &nome);
 
     if(strcmp(operacao, "MKFILE") == 0){
@@ -463,8 +458,6 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
     }else if(strstr(operacao, "DIR") != NULL){
         dir(*dirAtual);
     }else if(strcmp(operacao, "CD") == 0){
-        NodoCluster dir;
-        dir = pegaCluster(*dirAtual);
         listaComandos = NULL;
         listaComandos = pegaSequenciaComandos(nome, listaComandos);
         if(cd(listaComandos, dirAtual, *dirAtual)%2 != 0){
@@ -472,8 +465,6 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
         }
         apagaLSE(listaComandos);
     }
-
-
 
     else if(strcmp(operacao, "RM") == 0){
         printf("Deletar arquivo/direorio\n");
