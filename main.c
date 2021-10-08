@@ -13,17 +13,20 @@ int main()
     int *p = &diretorioAtual;
     short int sair = 0;            //flag para manter o loop de escrita de comandos rodando
 
-    inicializaArquivo();
-    if(pegaTabela(tabela)){
-        do{
-            NodoCluster dir = pegaCluster(diretorioAtual);
-            printf("%s:\\>", dir.nome);
-            m = (char*) stringEntrada(stdin, TAMSTRING);
-            fflush(stdin);
-            detectaComando(m, p, tabela, &sair);
-        }while(!sair);
+    if(inicializaArquivo()){
+        if(pegaTabela(tabela)){
+            do{
+                NodoCluster dir = pegaCluster(diretorioAtual);
+                printf("%s:\\>", dir.nome);
+                m = (char*) stringEntrada(stdin, TAMSTRING);
+                fflush(stdin);
+                detectaComando(m, p, tabela, &sair);
+            }while(!sair);
+        }else{
+            printf("Nao foi possivel ler a tabela FAT\n");
+        }
     }else{
-        printf("Nao foi possivel ler a tabela de ponteiros\n");
+        printf("Nao foi possivel inicializar o arquivo de disco");
     }
 
     return 0;

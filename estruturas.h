@@ -28,7 +28,6 @@ typedef struct TipoListaStrings{
 typedef struct TipoCluster{
     char nome[50];
     char extensao[3];
-    char inicio;
     char pai;
     char marcador;
 }NodoCluster;
