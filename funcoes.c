@@ -93,7 +93,7 @@ void pegaOperacaoNome(char comando[], char** operacao, char** nome){
     *nome = strtok(NULL, " ");
 }
 
-int pegaTabela(char tabela[]){
+int pegaTabela(char tabela[], MetaDados metaDados){
 /* Carrega para a memória a tabela FAT do arquivo.
  * Entrada:
  *      Tabela FAT que armazena os ponteiros dos discos
@@ -110,20 +110,20 @@ int pegaTabela(char tabela[]){
         return 0;
     }
 
-    fseek(arq, sizeof(MetaDados) + 1, SEEK_SET);
-    while(i < TAMTABELA && fread(&tabela[i], sizeof(char), 1, arq) == 1){ //enquanto houver sucesso na leitura da tabela
+    fseek(arq, metaDados.initIndice + 1, SEEK_SET);
+    while(i < metaDados.tamIndice && fread(&tabela[i], sizeof(char), 1, arq) == 1){ //enquanto houver sucesso na leitura da tabela
         i++;
     }
     fclose(arq);
 
-    if(i != TAMTABELA){  //se nao chegou no final da tabela
+    if(i != metaDados.tamIndice){  //se nao chegou no final da tabela
         printf("Erro na leitura do arquivo\n");
         return 0;
     }
     return 1;
 }
 
-int primeiraPosicaoDisponivel(char tabela[]){
+int primeiraPosicaoDisponivel(char tabela[], MetaDados metaDados){
 /* Retorna o ponteiro(linha) do pirmeiro cluster disponível
  * Entrada:
  *      Tabela FAT que armazena os ponteiros dos discos
@@ -133,16 +133,16 @@ int primeiraPosicaoDisponivel(char tabela[]){
  */
     int i = 0;
 
-    while(i < 256 && tabela[i] != 0)
+    while(i < metaDados.tamIndice && tabela[i] != 0)
         i++;
 
-    if(i == 256)
+    if(i == metaDados.tamIndice)
         i = -1;
 
     return i;
 }
 
-int alteraTabelaFat(char tabela[], int ponteiroCluster){
+int alteraTabelaFat(char tabela[], int ponteiroCluster, MetaDados metaDados){
 /* Atualiza a tabela e escreve a tabela modificada no arquivo
  * Entrada:
  *      Tabela FAT que armazena os ponteiros dos discos
@@ -159,8 +159,8 @@ int alteraTabelaFat(char tabela[], int ponteiroCluster){
     }
 
     tabela[ponteiroCluster] = 255;
-    fseek(arq, sizeof(MetaDados) + 1, SEEK_SET);
-    fwrite(tabela, sizeof(char) * TAMTABELA, 1, arq);
+    fseek(arq, metaDados.initIndice + 1, SEEK_SET);
+    fwrite(tabela, sizeof(char) * metaDados.tamIndice, 1, arq);
 
     fclose(arq);
     if(ferror(arq)){
@@ -170,7 +170,7 @@ int alteraTabelaFat(char tabela[], int ponteiroCluster){
     return 1;
 }
 
-int adicionaFilho(char pai, char filho){
+int adicionaFilho(char pai, char filho, MetaDados metaDados){
 /* Insere um ponteiro, da tabela fat, na LSE de filhos do cluster "pai"
  * Se a LSE de filhos do cluster pai está vazia, insere o filho na primeira posição
  * Caso contrário, insere o filho na ultima posição da LSE.
@@ -190,7 +190,7 @@ int adicionaFilho(char pai, char filho){
     }
 
     //Posiciona o ponteiro do arquivo no cluster onde será inserido um filho
-    fseek(arq, sizeof(MetaDados) + 1 + TAMTABELA + 1  + ((TAMCLUSTER + 1) * pai), SEEK_SET);
+    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * pai), SEEK_SET);
 
     //Percorre todos os caracteres do cluster até encontrar o marcador '*'
     while(a != '*'){
@@ -214,7 +214,7 @@ int adicionaFilho(char pai, char filho){
     return 1;
 }
 
-int mkDir(char* nome, char clusterPai, char cluster, char tabela[]){
+int mkDir(char* nome, char clusterPai, char cluster, char tabela[], MetaDados metaDados){
 /* Cria um diretório no primeiro cluster disponível dado o diretório atual
  * Entrada:
  *      String com o nome do diretorio dado pelo usuario
@@ -229,7 +229,7 @@ int mkDir(char* nome, char clusterPai, char cluster, char tabela[]){
     NodoCluster novo = {"", "", 'a', '*'};
 
     //Marca o primeiro cluster disponivel como ocupado e escreve no arquivo
-    if(!alteraTabelaFat(tabela, cluster)){
+    if(!alteraTabelaFat(tabela, cluster, metaDados)){
         printf("Erro ao atualizar a tabela\n");
         return 0;
     }
@@ -244,8 +244,7 @@ int mkDir(char* nome, char clusterPai, char cluster, char tabela[]){
     }
 
     //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretório
-    fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * cluster), SEEK_SET);
-    fwrite("\n", sizeof(char), 1, arq);
+    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * cluster), SEEK_SET);
     //Escreve o cluster no arquivo
     fwrite(&novo, sizeof(NodoCluster), 1, arq);
 
@@ -255,7 +254,7 @@ int mkDir(char* nome, char clusterPai, char cluster, char tabela[]){
         return 0;
     }
 
-    if(!adicionaFilho(clusterPai, cluster)){  //se houve erro ao adicionar um filho na lista de filhos
+    if(!adicionaFilho(clusterPai, cluster, metaDados)){  //se houve erro ao adicionar um filho na lista de filhos
         printf("Erro ao atualizar o diretorio pai\n");
         return 0;
     }
@@ -263,7 +262,7 @@ int mkDir(char* nome, char clusterPai, char cluster, char tabela[]){
     return 1;
 }
 
-int pegaCluster(int ponteiroCluster, NodoCluster* cluster){
+int pegaCluster(int ponteiroCluster, NodoCluster* cluster, MetaDados metaDados){
 /* Dado um inteiro, que representa o ponteiro de um cluster, retorna o cluster para o qual o ponteiro aponta.
  * Entrada:
  *      Inteiro que representa o ponteiro para a linha em que o cluster está
@@ -279,7 +278,7 @@ int pegaCluster(int ponteiroCluster, NodoCluster* cluster){
         return 0;
     }
 
-    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * ponteiroCluster), SEEK_SET);
+    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * ponteiroCluster), SEEK_SET);
     fread(cluster, sizeof(NodoCluster), 1, arq);
 
     fclose(arq);
@@ -291,7 +290,7 @@ int pegaCluster(int ponteiroCluster, NodoCluster* cluster){
     return 1;
 }
 
-int dir(char pai){
+int dir(char pai, MetaDados metaDados){
 /* Lista todos os subdiretorios e arquivos dado um diretorio principal
  * Entrada:
  *      Char, que representa o ponteiro da pasta que queremos exibir os arquivos e diretórios
@@ -310,7 +309,7 @@ int dir(char pai){
     }
 
     //Posiciona o cursor do arquivo no cluster que desejamos listar as informações
-    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * pai), SEEK_SET);
+    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * pai), SEEK_SET);
 
     //percorre o cluster até encontrar o marcador '*'
     while(aux != '*'){
@@ -325,7 +324,7 @@ int dir(char pai){
             //guarda a posição do filho atual
             i = ftell(arq);
             //Pega o cluster que está na lista de filhos
-            if(!pegaCluster(aux, &cluster)){
+            if(!pegaCluster(aux, &cluster, metaDados)){
                 fclose(arq);
                 return 0;
             }
@@ -413,7 +412,7 @@ ListaStrings* pegaSequenciaComandos(char *comando, ListaStrings *lc){
     return lc;
 }
 
-int cdRecursiva(ListaStrings *listaComandos, int *diretorioAtual, char subdir){
+int cdRecursiva(ListaStrings *listaComandos, int *diretorioAtual, char subdir, MetaDados metaDados){
 /* Caso o comando de CD nao for '..', precisamos recursivamente navegar pelas pastas
  * Entrada:
  *      Uma lista de strings, que representa o caminho de um diretório/arquivo
@@ -434,7 +433,7 @@ int cdRecursiva(ListaStrings *listaComandos, int *diretorioAtual, char subdir){
     }
 
     //Posiciona o ponteiro no cluster atual
-    fseek(arq, sizeof(MetaDados) + 1 + TAMTABELA + 1 + ((TAMCLUSTER + 1) * subdir), SEEK_SET);
+    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * subdir), SEEK_SET);
 
     //Se nenhuma das opções acima for satisfeita, inicia a busca, com recursão,
     //até encontar, ou não, o caminho solicitado
@@ -450,7 +449,7 @@ int cdRecursiva(ListaStrings *listaComandos, int *diretorioAtual, char subdir){
     }else{                                  //Se não, busca se há uma pasta com o nome solicitado no caminho indicado
         while(aux != 0){
             i = ftell(arq);                 //guarda a posição atual na lista de filhos
-            if(!pegaCluster(aux, &dir)){    //pega o cluster indicado pelo filho
+            if(!pegaCluster(aux, &dir, metaDados)){    //pega o cluster indicado pelo filho
                 printf("Erro na leitura do cluster\n");
                 return 0;
             }
@@ -463,7 +462,7 @@ int cdRecursiva(ListaStrings *listaComandos, int *diretorioAtual, char subdir){
                     fclose(arq);
                     return 1;
                 }else{//Se o próximo elemento da lista de comandos não é 0, chama a função recursivamente.
-                    return cdRecursiva(listaComandos->prox, diretorioAtual, aux);
+                    return cdRecursiva(listaComandos->prox, diretorioAtual, aux, metaDados);
                 }
             }
             fseek(arq, i, SEEK_SET);
@@ -479,7 +478,7 @@ int cdRecursiva(ListaStrings *listaComandos, int *diretorioAtual, char subdir){
     return 1;
 }
 
-int cd(ListaStrings *listaComandos, int *diretorioAtual){
+int cd(ListaStrings *listaComandos, int *diretorioAtual, MetaDados metaDados){
 /* Muda o diretorio atual para algum subdiretorio
  * Entrada:
  *      Uma lista de strings, que representa o caminho de um diretório/arquivo
@@ -487,7 +486,7 @@ int cd(ListaStrings *listaComandos, int *diretorioAtual){
  * Retorno:
  *      1 caso o caminho tenha sido encontrado
  *      0 caso o caminho nao tenha sido encontrado
-*/
+ */
     NodoCluster dir;
     FILE *arq;
 
@@ -503,7 +502,7 @@ int cd(ListaStrings *listaComandos, int *diretorioAtual){
     }
 
     //Pega as informacoes do diretorio atual
-    fseek(arq, sizeof(MetaDados) + 1 + TAMTABELA + 1 + ((TAMCLUSTER + 1) * (*diretorioAtual)), SEEK_SET);
+    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * (*diretorioAtual)), SEEK_SET);
     fread(&dir, sizeof(NodoCluster), 1, arq);
     fclose(arq);
     if(strcmp(listaComandos->comando, "..") == 0 && !ferror(arq)){  //Verifica se o comando digitado foi o de "voltar"
@@ -515,7 +514,7 @@ int cd(ListaStrings *listaComandos, int *diretorioAtual){
     }
 
     //Senao for o comando '..', percorre recursivamente pelas pastas
-    return(cdRecursiva(listaComandos, diretorioAtual, *diretorioAtual));
+    return(cdRecursiva(listaComandos, diretorioAtual, *diretorioAtual, metaDados));
 }
 
 ListaStrings* apagaLSE(ListaStrings* ptNum){
@@ -534,7 +533,7 @@ ListaStrings* apagaLSE(ListaStrings* ptNum){
     return NULL;
 }
 
-void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sair){
+void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sair, MetaDados metaDados){
 /* Detecta os possíveis comandos exigidas pelo usuário,
  * separando a operação do possível nome de diretórios e arquivos
  * Entrada:
@@ -543,6 +542,7 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
  *      Tabela FAT que armazena os ponteiros dos discos
  *      Flag que controla o comando de saida do usuario
  */
+    int clusterDisponivel;
     char *operacao = NULL, *nome = NULL;
     ListaStrings *listaComandos;
 
@@ -551,17 +551,18 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
     if(strcmp(operacao, "MKFILE") == 0){
         printf("Criar Arquivo");
     }else if(strstr(operacao, "MKDIR") != NULL){
-        if(nome != NULL && mkDir(nome, *dirAtual, primeiraPosicaoDisponivel(tabela), tabela)){
+        clusterDisponivel = primeiraPosicaoDisponivel(tabela, metaDados);
+        if((nome != NULL) && (clusterDisponivel != -1) && (mkDir(nome, *dirAtual, clusterDisponivel, tabela, metaDados))){
             printf("Diretorio Criado!\n");
         }else{
             printf("Erro ao criar o diretorio\n");
         }
     }else if(strstr(operacao, "DIR") != NULL){
-        dir(*dirAtual);
+        dir(*dirAtual, metaDados);
     }else if(strcmp(operacao, "CD") == 0){
         listaComandos = NULL;
         listaComandos = pegaSequenciaComandos(nome, listaComandos);
-        if(!cd(listaComandos, dirAtual)){
+        if(!cd(listaComandos, dirAtual, metaDados)){
             printf("Caminho nao encontrado\n");
         }
         apagaLSE(listaComandos);

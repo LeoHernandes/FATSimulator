@@ -13,18 +13,19 @@ int main()
     int *p = &diretorioAtual;
     short int sair = 0;            //flag para manter o loop de escrita de comandos rodando
     NodoCluster dir;
+    MetaDados metaDados;
 
     if(inicializaArquivo()){
-        if(pegaTabela(tabela)){
+        if(pegaMetadados(&metaDados) && pegaTabela(tabela, metaDados)){ //se foi possivel carregar a tabela e os metadados
             do{
-                pegaCluster(diretorioAtual, &dir);
+                pegaCluster(diretorioAtual, &dir, metaDados);
                 printf("%s:\\>", dir.nome);
                 m = (char*) stringEntrada(stdin, TAMSTRING);
                 fflush(stdin);
-                detectaComando(m, p, tabela, &sair);
+                detectaComando(m, p, tabela, &sair, metaDados);
             }while(!sair);
         }else{
-            printf("Nao foi possivel ler a tabela FAT\n");
+            printf("Nao foi possivel ler as informacoes necessarias\n");
         }
     }else{
         printf("Nao foi possivel inicializar o arquivo de disco");
