@@ -4,7 +4,7 @@
 #include "funcoes.h"
 
 int inicializaArquivo(){
-/* Inicializa o arquivo que simula o disco.
+/* Inicializa o arquivo que simula o disco caso ele não exista ainda.
  * Cria uma área de metadados de 8 bytes
  * Cria uma áre de 256 bytes, que armazena a tabela fat
  * Inicializa o cluster "root", tornando-o o principal.
@@ -19,36 +19,38 @@ int inicializaArquivo(){
     MetaDados metaDados = {TAMTABELA, TAMCLUSTER, INITABELA, INITCLUSTER}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
     NodoCluster root = {"root", "", 'a', '*'};
 
-    if((arq = fopen("ArqDisco.bin", "a+b")) == NULL){  //se houve problema na abertura do arquivo
-        printf("Erro na criacao do arquivo!\n");
-        return 0;
-    }
+    if((arq = fopen("ArqDisco.bin", "r")) == NULL){        //se o arquivo não existe ainda
+        if((arq = fopen("ArqDisco.bin", "a+b")) == NULL){  //se houve problema na abertura do arquivo
+            printf("Erro na criacao do arquivo!\n");
+            return 0;
+        }
 
-    //criacao dos metadados
-    fwrite(&metaDados, sizeof(MetaDados), 1, arq);      //escreve os metadados
-    fwrite("\n", sizeof(char), 1, arq);
-
-    //criacao da tabela FAT
-    fwrite(&FF, sizeof(char), 1, arq);                  //preenche a primeira posição da tabela FAT para o diretório root
-    for(i = 0; i < TAMTABELA - 1; i++)
-        fwrite(&zero, sizeof(char), 1, arq);            //preenche o restante da tabela
-    fwrite("\n", sizeof(char), 1, arq);
-
-    //Laco que faz a criacao dos 256 clusters
-    fwrite(&root, sizeof(NodoCluster), 1, arq);         //armazena o root no primeiro cluster
-    for(i = 0; i < (TAMCLUSTER - sizeof(NodoCluster)); i++)
-        fwrite(&zero, sizeof(char), 1, arq);
-
-    for(i = 0; i < TAMTABELA - 1; i++){
+        //criacao dos metadados
+        fwrite(&metaDados, sizeof(MetaDados), 1, arq);      //escreve os metadados
         fwrite("\n", sizeof(char), 1, arq);
-        for(j = 0; j < TAMCLUSTER; j++)
-            fwrite(&zero, sizeof(char), 1, arq);   //armazena os outros 255 clusters
-    }
 
-    fclose(arq);
-    if(ferror(arq)){  //se houver erro em qualquer parte da escrita
-        printf("Erro no preenchimento do arquivo!");
-        return 0;
+        //criacao da tabela FAT
+        fwrite(&FF, sizeof(char), 1, arq);                  //preenche a primeira posição da tabela FAT para o diretório root
+        for(i = 0; i < TAMTABELA - 1; i++)
+            fwrite(&zero, sizeof(char), 1, arq);            //preenche o restante da tabela
+        fwrite("\n", sizeof(char), 1, arq);
+
+        //Laco que faz a criacao dos 256 clusters
+        fwrite(&root, sizeof(NodoCluster), 1, arq);         //armazena o root no primeiro cluster
+        for(i = 0; i < (TAMCLUSTER - sizeof(NodoCluster)); i++)
+            fwrite(&zero, sizeof(char), 1, arq);
+
+        for(i = 0; i < TAMTABELA - 1; i++){
+            fwrite("\n", sizeof(char), 1, arq);
+            for(j = 0; j < TAMCLUSTER; j++)
+                fwrite(&zero, sizeof(char), 1, arq);   //armazena os outros 255 clusters
+        }
+
+        fclose(arq);
+        if(ferror(arq)){  //se houver erro em qualquer parte da escrita
+            printf("Erro no preenchimento do arquivo!");
+            return 0;
+        }
     }
     return 1;
 }
