@@ -12,6 +12,6 @@ int pegaTabela(char tabela[]);
 
 int primeiraPosicaoDisponivel(char tabela[]);
 
-NodoCluster pegaCluster(int ponteiroCluster);
+int pegaCluster(int ponteiroCluster, NodoCluster* cluster);
 
 char* stringEntrada(FILE* fp, size_t tamanho);

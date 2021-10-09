@@ -12,11 +12,12 @@ int main()
     int diretorioAtual = 0;
     int *p = &diretorioAtual;
     short int sair = 0;            //flag para manter o loop de escrita de comandos rodando
+    NodoCluster dir;
 
     if(inicializaArquivo()){
         if(pegaTabela(tabela)){
             do{
-                NodoCluster dir = pegaCluster(diretorioAtual);
+                pegaCluster(diretorioAtual, &dir);
                 printf("%s:\\>", dir.nome);
                 m = (char*) stringEntrada(stdin, TAMSTRING);
                 fflush(stdin);

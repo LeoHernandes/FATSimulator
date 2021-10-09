@@ -12,12 +12,7 @@
 /* ESTRUTURAS */
 /*------------*/
 
-/* Lista simplesmente encadeada para armazenar todos os filhos (pastas e arquivos) de um nodo */
-typedef struct TipoListaFilhos{
-    char filho;
-    struct TipoListaFilhos* prox;
-}ListaFilhos;
-
+/* Lista simplesmente encadeada para armazenar os diretorios acessados em sequencia */
 typedef struct TipoListaStrings{
     char *comando;
     struct TipoListaStrings *prox;

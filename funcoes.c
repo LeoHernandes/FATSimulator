@@ -203,6 +203,7 @@ int adicionaFilho(char pai, char filho){
     //insere o ponteiro do filho na lista de filhos do pai
     fseek(arq, -1, SEEK_CUR);
     fwrite(&filho, sizeof(char), 1, arq);
+
     fclose(arq);
     if(ferror(arq)){
         printf("Erro na escrita do arquivo\n");
@@ -213,93 +214,148 @@ int adicionaFilho(char pai, char filho){
 
 int mkDir(char* nome, char clusterPai, char cluster, char tabela[]){
 /* Cria um diretório no primeiro cluster disponível dado o diretório atual
- * Retorna 1 caso seja realizado com sucesso
- * Retorna 0 caso a criação falhe
+ * Entrada:
+ *      String com o nome do diretorio dado pelo usuario
+ *      Ponteiro (char) para o pai do diretório a ser criado
+ *      Ponteiro (char) para o cluster diponível
+ *      Tabela FAT que armazena os ponteiros dos discos
+ * Retorno:
+ *      1 caso seja realizado com sucesso
+ *      0 caso a criação falhe
  */
-    //Ponteiro para o arquivo
     FILE *arq;
-    arq = fopen("ArqDisco.bin", "r+b");
-    int i = 0;
+    NodoCluster novo = {"", "", 'a', '*'};
+
+    //Marca o primeiro cluster disponivel como ocupado e escreve no arquivo
+    if(!alteraTabelaFat(tabela, cluster)){
+        printf("Erro ao atualizar a tabela\n");
+        return 0;
+    }
 
     //Cria o novo Cluster
-    NodoCluster novo = {"", "", 'a', '*'};
     strcpy(novo.nome, nome);
     novo.pai = clusterPai;
 
-
-    //Marca o primeiro cluster dispnível como ocupado e escreve no arquivo(talvez vire uma função)
-    alteraTabelaFat(tabela, cluster);
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
 
     //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretório
     fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * cluster), SEEK_SET);
     fwrite("\n", sizeof(char), 1, arq);
-
     //Escreve o cluster no arquivo
-    i = fwrite(&novo, sizeof(NodoCluster), 1, arq);
-    //Se deu erro durante a gravação, sai da função, retornando 0.
-    if(i == 0){
-        fclose(arq);
+    fwrite(&novo, sizeof(NodoCluster), 1, arq);
+
+    fclose(arq);
+    if(ferror(arq)){
+        printf("Erro ao gravar o novo cluster\n");
         return 0;
     }
 
-    fclose(arq);
-    adicionaFilho(clusterPai, cluster);
+    if(!adicionaFilho(clusterPai, cluster)){  //se houve erro ao adicionar um filho na lista de filhos
+        printf("Erro ao atualizar o diretorio pai\n");
+        return 0;
+    }
+
     return 1;
 }
 
-void dir(char pai){
-/*
-    char* ->
-    Recebe um char, que representa o ponteiro da pasta que queremos exibir os arquivos e diretórios
-    Lista todos os subdiretorios e arquivos de um diretorio principal
+int pegaCluster(int ponteiroCluster, NodoCluster* cluster){
+/* Dado um inteiro, que representa o ponteiro de um cluster, retorna o cluster para o qual o ponteiro aponta.
+ * Entrada:
+ *      Inteiro que representa o ponteiro para a linha em que o cluster está
+ *      Ponteiro para NodoCluster para preenche-lo com o cluster apontado
+ * Retorno:
+ *      1, caso a leitura seja feito com sucesso
+ *      0, caso haja falha na leitura
  */
-
     FILE *arq;
-    arq = fopen("ArqDisco.bin", "r+b");
-    NodoCluster cluster;
-    char a = 0;
+
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
+
+    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * ponteiroCluster), SEEK_SET);
+    fread(cluster, sizeof(NodoCluster), 1, arq);
+
+    fclose(arq);
+    if(ferror(arq)){
+        printf("Erro a leitura do cluster no arquivo\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+int dir(char pai){
+/* Lista todos os subdiretorios e arquivos dado um diretorio principal
+ * Entrada:
+ *      Char, que representa o ponteiro da pasta que queremos exibir os arquivos e diretórios
+ * Retorno:
+ *      1, caso consigamos ler com sucesso do arquivo
+ *      0, caso haja falha na leitura
+ */
     long i = 0;
+    char aux = 0;
+    FILE *arq;
+    NodoCluster cluster;
+
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
+
     //Posiciona o cursor do arquivo no cluster que desejamos listar as informações
     fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * pai), SEEK_SET);
 
     //percorre o cluster até encontrar o marcador '*'
-    while(a != '*'){
-        a = fgetc(arq);
+    while(aux != '*'){
+        aux = fgetc(arq);
     }
-        a = fgetc(arq);
+    aux = fgetc(arq);
     //Verifica se a lista de filhos do cluster está vazia.
-    if(a == 0){
+    if(aux == 0){
         printf("<vazio>");
-    }else{//Se não, percorre a lista de filhos até o final e printa os nomes na tela.
-        while(a != 0){
+    }else{     //Se não, percorre a lista de filhos até o final e printa os nomes na tela.
+        while(aux != 0){
             //guarda a posição do filho atual
             i = ftell(arq);
             //Pega o cluster que está na lista de filhos
-            cluster = pegaCluster(a);
+            if(!pegaCluster(aux, &cluster)){
+                fclose(arq);
+                return 0;
+            }
             printf("%s  ", cluster.nome);
             //retorna para a lista de filhos
             fseek(arq, i, SEEK_SET);
-            a = fgetc(arq);
+            aux = fgetc(arq);
         }
     }
-
-    //Laço que percorre a LSE de filhos, printando-os, até chegar ao final da mesma.
-
-
     fclose(arq);
     printf("\n");
 
-
+    if(ferror(arq)){
+        printf("Nao foi possivel ler todos os subdiretorios\n");
+        return 0;
+    }
+    return 1;
 }
 
 char* stringEntrada(FILE* fp, size_t tamanho){
 /* Função que pega o input do usuário e estende o tamanho
  * da variável que guarda a string caso o input seja muito grande
+ * Entrada:
+ *      Ponteiro para FILE para saber de qual stream pegar o input
+ *      Tamanho inicial para armezar o input
+ * Retorno:
+ *      Ponteiro para a string com o input recebido
  */
     char *str;
     int ch;
     size_t index = 0;
-    str = realloc(NULL, sizeof(*str)*tamanho); //tamanho é o tamanho inicial
+    str = realloc(NULL, sizeof(*str) * tamanho); //tamanho é o tamanho inicial
 
     if(!str)
         return str;
@@ -355,82 +411,118 @@ ListaStrings* pegaSequenciaComandos(char *comando, ListaStrings *lc){
     return lc;
 }
 
-int cd(ListaStrings *listaComandos, int *diretorioAtual, char subdir){
-/* ListaStrings*, char*, char -> int.
- * Dado uma lista de filhos de um diretório, uma lista de strings, que representa o caminho
- * de um diretório/arquivo e o um int, que representa o diretório em que foi realizado uma operação.
- * Retorna 1 caso o caminho não tenha sido encontrado
- * Retorna 0 caso o caminho tenha sido encontrado
-*/
-    NodoCluster dir;
-    char a = 0;
+int cdRecursiva(ListaStrings *listaComandos, int *diretorioAtual, char subdir){
+/* Caso o comando de CD nao for '..', precisamos recursivamente navegar pelas pastas
+ * Entrada:
+ *      Uma lista de strings, que representa o caminho de um diretório/arquivo
+ *      Inteiro que representa o diretório em que foi realizado a operação
+ *      Char que representa um subdiretorio para a funcao ser chamada recursivamente
+ * Retorno:
+ *      1 caso o caminho tenha sido encontrado
+ *      0 caso o caminho nao tenha sido encontrado
+ */
+    char aux = 0;
     long i = 0;
-    //Pega o diretório atual do disco
     FILE *arq;
-    arq = fopen("ArqDisco.bin", "r+b");
-    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * *diretorioAtual), SEEK_SET);
-    fread(&dir, sizeof(NodoCluster), 1, arq);
+    NodoCluster dir;
+
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
+
     //Posiciona o ponteiro no cluster atual
-    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * subdir), SEEK_SET);
+    fseek(arq, sizeof(MetaDados) + 1 + TAMTABELA + 1 + ((TAMCLUSTER + 1) * subdir), SEEK_SET);
 
-    //Verifica se a lista de comando é vazia
-    if(listaComandos == NULL){
-        fclose(arq);
-        return 1;
-    }else if(strcmp(listaComandos->comando, "..") == 0){//Verifica se o comando digitado foi o de "voltar"
-        if(*diretorioAtual != 0){//Se o diretório atual é diferente do root, volta para a pasta "pai"
-            *diretorioAtual = dir.pai;
-            return 0;
-        }else{//Se não, fecha o arquivo e retorna 1, indicando erro.
-            fclose(arq);
-            return 1;
-        }
-    }
-    //Se nenhuma das opções acima for satisfeita, inicia a busca, com recursão, até encontar, ou não, o caminho solicitado
+    //Se nenhuma das opções acima for satisfeita, inicia a busca, com recursão,
+    //até encontar, ou não, o caminho solicitado
     //Encontra o marcador de inicio da lista de filhos
-    while(a != '*'){
-        a = fgetc(arq);
+    while(aux != '*'){
+        aux = fgetc(arq);
     }
-    a = fgetc(arq);
-    //Se o primeiro filho for igual a zero, a pasta pai não tem filho
-    if(a == 0){
-        //Fecha o arquivo e retorna 1, indicando erro.
-        fclose(arq);
-        return 1;
-    }else{//Se não, busca se há uma pasta com o nome solicitado no caminho indicado
-        while(a != 0){
-            //guarda a posição atual na lista de filhos
-            i = ftell(arq);
-            //pega o cluster indicado pelo filho
-            dir = pegaCluster(a);
-            //Verifica se o nome da psta encontrada na lista de filhos possui o mesmo nome do caminho solicitado
-             if(strcmp(listaComandos->comando, dir.nome) == 0){
-            //Se sim, verifica se o próximo elemento da lista de comandos é 0
-            if(listaComandos->prox == NULL){
-                //Caso seja, seta o diretório buscado como atual e retorna 0
-                *diretorioAtual = a;
-                fclose(arq);
+    aux = fgetc(arq);
+
+    if(aux == 0){                           //Se o primeiro filho for igual a zero, a pasta pai não tem filho
+        fclose(arq);                        //Fecha o arquivo e retorna 0, indicando erro.
+        return 0;
+    }else{                                  //Se não, busca se há uma pasta com o nome solicitado no caminho indicado
+        while(aux != 0){
+            i = ftell(arq);                 //guarda a posição atual na lista de filhos
+            if(!pegaCluster(aux, &dir)){    //pega o cluster indicado pelo filho
+                printf("Erro na leitura do cluster\n");
                 return 0;
-            }else{//Se o próximo elemento da lista de comandos não é 0, chama a função recursivamente.
-            return cd(listaComandos->prox, diretorioAtual, a);
             }
-        }
-        fseek(arq, i, SEEK_SET);
-        a = fgetc(arq);
+            //Verifica se o nome da pasta encontrada na lista de filhos possui o mesmo nome do caminho solicitado
+            if(strcmp(listaComandos->comando, dir.nome) == 0){
+                //Se sim, verifica se o próximo elemento da lista de comandos é 0
+                if(listaComandos->prox == NULL){
+                    //Caso seja, seta o diretório buscado como atual e retorna 1
+                    *diretorioAtual = aux;
+                    fclose(arq);
+                    return 1;
+                }else{//Se o próximo elemento da lista de comandos não é 0, chama a função recursivamente.
+                    return cdRecursiva(listaComandos->prox, diretorioAtual, aux);
+                }
+            }
+            fseek(arq, i, SEEK_SET);
+            aux = fgetc(arq);
         }
     }
-
-
 
     fclose(arq);
+    if(ferror(arq)){
+        printf("Erro na leitura do arquivo\n");
+        return 0;
+    }
     return 1;
 }
 
-ListaStrings* apagaLSE(ListaStrings* ptNum){
-/*
-    ListaStrings -> ListaStrings
-    Libera toda a memória alocada e ocupada por uma LSE
+int cd(ListaStrings *listaComandos, int *diretorioAtual){
+/* Muda o diretorio atual para algum subdiretorio
+ * Entrada:
+ *      Uma lista de strings, que representa o caminho de um diretório/arquivo
+ *      Inteiro que representa o diretório em que foi realizado a operação
+ * Retorno:
+ *      1 caso o caminho tenha sido encontrado
+ *      0 caso o caminho nao tenha sido encontrado
 */
+    NodoCluster dir;
+    FILE *arq;
+
+    //Verifica se a lista de comando é vazia
+    if(listaComandos == NULL){
+        return 1;
+    }
+
+    //Se nao for, abre o arquivo
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
+
+    //Pega as informacoes do diretorio atual
+    fseek(arq, sizeof(MetaDados) + 1 + TAMTABELA + 1 + ((TAMCLUSTER + 1) * (*diretorioAtual)), SEEK_SET);
+    fread(&dir, sizeof(NodoCluster), 1, arq);
+    fclose(arq);
+    if(strcmp(listaComandos->comando, "..") == 0 && !ferror(arq)){  //Verifica se o comando digitado foi o de "voltar"
+        if(*diretorioAtual != 0){                                   //Se o diretório atual é diferente do root, volta para a pasta "pai"
+            *diretorioAtual = dir.pai;
+            return 1;
+        }                                                           //Senao, fecha o arquivo e retorna 1, indicando erro.
+        return 0;
+    }
+
+    //Senao for o comando '..', percorre recursivamente pelas pastas
+    return(cdRecursiva(listaComandos, diretorioAtual, *diretorioAtual));
+}
+
+ListaStrings* apagaLSE(ListaStrings* ptNum){
+/* Libera toda a memória alocada e ocupada por uma LSE
+ * Entrada:
+ *      Ponteiro para o início da lista
+ * Retorno:
+ *      Ponteiro NULL
+ */
     ListaStrings* aux;
     while(ptNum != NULL){
         aux = ptNum;
@@ -442,9 +534,16 @@ ListaStrings* apagaLSE(ListaStrings* ptNum){
 
 void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sair){
 /* Detecta os possíveis comandos exigidas pelo usuário,
- * separando a operação do possível nome de diretórios e arquivos */
+ * separando a operação do possível nome de diretórios e arquivos
+ * Entrada:
+ *      Input de comando dado pelo ususario
+ *      Ponteiro (linha) do diretorio atual
+ *      Tabela FAT que armazena os ponteiros dos discos
+ *      Flag que controla o comando de saida do usuario
+ */
     char *operacao = NULL, *nome = NULL;
     ListaStrings *listaComandos;
+
     pegaOperacaoNome(comando, &operacao, &nome);
 
     if(strcmp(operacao, "MKFILE") == 0){
@@ -460,12 +559,11 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
     }else if(strcmp(operacao, "CD") == 0){
         listaComandos = NULL;
         listaComandos = pegaSequenciaComandos(nome, listaComandos);
-        if(cd(listaComandos, dirAtual, *dirAtual)%2 != 0){
+        if(!cd(listaComandos, dirAtual)){
             printf("Caminho nao encontrado\n");
         }
         apagaLSE(listaComandos);
     }
-
     else if(strcmp(operacao, "RM") == 0){
         printf("Deletar arquivo/direorio\n");
     }else if(strstr(operacao, "EDIT") != NULL){
@@ -481,21 +579,6 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
     }
 }
 
-NodoCluster pegaCluster(int ponteiroCluster){
-/*
-    Int -> NodoCluster;
-    Dado um inteiro, que representa o ponteiro de um cluster, retorna o cluster para o qual o ponteiro aponta.
-*/
-    NodoCluster dir;
-    FILE *arq;
-    arq = fopen("ArqDisco.bin", "r+b");
-    fseek(arq, sizeof(MetaDados)+1 + TAMTABELA+1  + ((TAMCLUSTER + 1) * ponteiroCluster), SEEK_SET);
-    fread(&dir, sizeof(NodoCluster), 1, arq);
-    fclose(arq);
-
-    return dir;
-}
-
 int insereNodoCluster(NodoCluster nodoCluster, int ponteiroCluster){
     NodoCluster dir;
     FILE *arq;
@@ -503,7 +586,6 @@ int insereNodoCluster(NodoCluster nodoCluster, int ponteiroCluster){
 
     fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * ponteiroCluster), SEEK_SET);
     fwrite("\n", sizeof(char), 1, arq);
-
 
     if(fwrite(&dir, sizeof(NodoCluster), 1, arq)){
         fclose(arq);
