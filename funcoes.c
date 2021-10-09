@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "funcoes.h"
+#include "listaStrings.h"
+
+/*****************************************************************************************************/
+/*                                   FUNCOES AUXILIARES                                              */
+/*****************************************************************************************************/
 
 int inicializaArquivo(){
 /* Inicializa o arquivo que simula o disco caso ele não exista ainda.
@@ -55,6 +59,47 @@ int inicializaArquivo(){
     return 1;
 }
 
+char* stringEntrada(FILE* fp, size_t tamanho){
+/* Função que pega o input do usuário e estende o tamanho
+ * da variável que guarda a string caso o input seja muito grande
+ * Entrada:
+ *      Ponteiro para FILE para saber de qual stream pegar o input
+ *      Tamanho inicial para armezar o input
+ * Retorno:
+ *      Ponteiro para a string com o input recebido
+ */
+    char *str;
+    int ch;
+    size_t index = 0;
+    str = realloc(NULL, sizeof(*str) * tamanho); //tamanho é o tamanho inicial
+
+    if(!str)
+        return str;
+
+    while(EOF != (ch = fgetc(fp)) && ch != '\n'){
+        str[index++] = ch;
+        if(index == tamanho){
+            str = realloc(str, sizeof(*str)*(tamanho += REALLOCSIZE));
+            if(!str)
+                return str;
+        }
+    }
+    str[index++] = '\0';
+
+    return realloc(str, sizeof(*str)*index);
+}
+
+void pegaOperacaoNome(char comando[], char** operacao, char** nome){
+/* Dado um comando do usuario, pega a operacao e o possível nome do diretorio ou arquivo fornecido
+ * Entrada:
+ *      String do comando todo fornecido pelo usuário
+ *      Ponteiro para a string que armazena a operação
+ *      Ponteiro para a string que armazena o nome do diretorio ou arquivo
+ */
+    *operacao = strtok(comando, " ");
+    *nome = strtok(NULL, " ");
+}
+
 int pegaMetadados(MetaDados* metaDados){
 /* Carrega os metadados do arquivo de disco se possível
  * Entrada:
@@ -80,17 +125,6 @@ int pegaMetadados(MetaDados* metaDados){
     }
     fclose(arq);
     return 1;
-}
-
-void pegaOperacaoNome(char comando[], char** operacao, char** nome){
-/* Dado um comando do usuario, pega a operacao e o possível nome do diretorio ou arquivo fornecido
- * Entrada:
- *      String do comando todo fornecido pelo usuário
- *      Ponteiro para a string que armazena a operação
- *      Ponteiro para a string que armazena o nome do diretorio ou arquivo
- */
-    *operacao = strtok(comando, " ");
-    *nome = strtok(NULL, " ");
 }
 
 int pegaTabela(char tabela[], MetaDados metaDados){
@@ -120,6 +154,34 @@ int pegaTabela(char tabela[], MetaDados metaDados){
         printf("Erro na leitura do arquivo\n");
         return 0;
     }
+    return 1;
+}
+
+int pegaCluster(int ponteiroCluster, NodoCluster* cluster, MetaDados metaDados){
+/* Dado um inteiro, que representa o ponteiro de um cluster, retorna o cluster para o qual o ponteiro aponta.
+ * Entrada:
+ *      Inteiro que representa o ponteiro para a linha em que o cluster está
+ *      Ponteiro para NodoCluster para preenche-lo com o cluster apontado
+ * Retorno:
+ *      1, caso a leitura seja feito com sucesso
+ *      0, caso haja falha na leitura
+ */
+    FILE *arq;
+
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
+
+    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * ponteiroCluster), SEEK_SET);
+    fread(cluster, sizeof(NodoCluster), 1, arq);
+
+    fclose(arq);
+    if(ferror(arq)){
+        printf("Erro a leitura do cluster no arquivo\n");
+        return 0;
+    }
+
     return 1;
 }
 
@@ -214,6 +276,27 @@ int adicionaFilho(char pai, char filho, MetaDados metaDados){
     return 1;
 }
 
+int insereNodoCluster(NodoCluster nodoCluster, int ponteiroCluster){
+    NodoCluster dir;
+    FILE *arq;
+    arq = fopen("ArqDisco.bin", "r+b");
+
+    fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * ponteiroCluster), SEEK_SET);
+    fwrite("\n", sizeof(char), 1, arq);
+
+    if(fwrite(&dir, sizeof(NodoCluster), 1, arq)){
+        fclose(arq);
+        return 1;
+    }else{
+        fclose(arq);
+        return 0;
+    }
+}
+
+/*****************************************************************************************************/
+/*                                   FUNCOES PRINCIPAIS                                              */
+/*****************************************************************************************************/
+
 int mkDir(char* nome, char clusterPai, char cluster, char tabela[], MetaDados metaDados){
 /* Cria um diretório no primeiro cluster disponível dado o diretório atual
  * Entrada:
@@ -256,34 +339,6 @@ int mkDir(char* nome, char clusterPai, char cluster, char tabela[], MetaDados me
 
     if(!adicionaFilho(clusterPai, cluster, metaDados)){  //se houve erro ao adicionar um filho na lista de filhos
         printf("Erro ao atualizar o diretorio pai\n");
-        return 0;
-    }
-
-    return 1;
-}
-
-int pegaCluster(int ponteiroCluster, NodoCluster* cluster, MetaDados metaDados){
-/* Dado um inteiro, que representa o ponteiro de um cluster, retorna o cluster para o qual o ponteiro aponta.
- * Entrada:
- *      Inteiro que representa o ponteiro para a linha em que o cluster está
- *      Ponteiro para NodoCluster para preenche-lo com o cluster apontado
- * Retorno:
- *      1, caso a leitura seja feito com sucesso
- *      0, caso haja falha na leitura
- */
-    FILE *arq;
-
-    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
-        printf("Erro na abertura do arquivo\n");
-        return 0;
-    }
-
-    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * ponteiroCluster), SEEK_SET);
-    fread(cluster, sizeof(NodoCluster), 1, arq);
-
-    fclose(arq);
-    if(ferror(arq)){
-        printf("Erro a leitura do cluster no arquivo\n");
         return 0;
     }
 
@@ -342,74 +397,6 @@ int dir(char pai, MetaDados metaDados){
         return 0;
     }
     return 1;
-}
-
-char* stringEntrada(FILE* fp, size_t tamanho){
-/* Função que pega o input do usuário e estende o tamanho
- * da variável que guarda a string caso o input seja muito grande
- * Entrada:
- *      Ponteiro para FILE para saber de qual stream pegar o input
- *      Tamanho inicial para armezar o input
- * Retorno:
- *      Ponteiro para a string com o input recebido
- */
-    char *str;
-    int ch;
-    size_t index = 0;
-    str = realloc(NULL, sizeof(*str) * tamanho); //tamanho é o tamanho inicial
-
-    if(!str)
-        return str;
-
-    while(EOF != (ch = fgetc(fp)) && ch != '\n'){
-        str[index++] = ch;
-        if(index == tamanho){
-            str = realloc(str, sizeof(*str)*(tamanho += REALLOCSIZE));
-            if(!str)
-                return str;
-        }
-    }
-    str[index++] = '\0';
-
-    return realloc(str, sizeof(*str)*index);
-}
-
-ListaStrings* inserirLSEStrings(ListaStrings* lseString, char * string){
-/* ListaStrings*, char* -> ListaStrings*
- * Dado um ponteiro para uma Lista de Strings e uma String, insere a String na lista.
- * Se a lista está vazia, insere na primeira posição
- * Caso contrário, percorre toda a lista e insere no final.
-*/
-    ListaStrings *novo, *aux;
-    novo = (ListaStrings*) malloc(sizeof(ListaStrings));
-    novo->comando = string;
-    if(lseString == NULL){
-        novo->prox = NULL;;
-        return novo;
-    }else{
-        aux = lseString;
-        while(aux->prox != NULL){
-            aux = aux->prox;
-        }
-        aux->prox = novo;
-        novo->prox = NULL;
-    }
-    return lseString;
-}
-
-ListaStrings* pegaSequenciaComandos(char *comando, ListaStrings *lc){
-/* char*, ListaStrings* -> ListaStrings
- * Dado uma String, contendo um caminho separado por '/', retorna uma
- * Lista de Strings contendo somente as strings que estão entre as barras.
- * Ex pegaSequenciaComandos("TESTE/NOVO/FOTOS/FESTA", ListaStrings): TESTE->NOVO->FOTOS->FESTA->NULL
- */
-    char* pt;
-    pt = strtok(comando, "/");
-    while(pt){
-        lc = inserirLSEStrings(lc,pt);
-        pt = strtok(NULL, "/");
-    }
-    return lc;
 }
 
 int cdRecursiva(ListaStrings *listaComandos, int *diretorioAtual, char subdir, MetaDados metaDados){
@@ -517,22 +504,6 @@ int cd(ListaStrings *listaComandos, int *diretorioAtual, MetaDados metaDados){
     return(cdRecursiva(listaComandos, diretorioAtual, *diretorioAtual, metaDados));
 }
 
-ListaStrings* apagaLSE(ListaStrings* ptNum){
-/* Libera toda a memória alocada e ocupada por uma LSE
- * Entrada:
- *      Ponteiro para o início da lista
- * Retorno:
- *      Ponteiro NULL
- */
-    ListaStrings* aux;
-    while(ptNum != NULL){
-        aux = ptNum;
-        ptNum = ptNum->prox;
-        free(aux);
-    }
-    return NULL;
-}
-
 void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sair, MetaDados metaDados){
 /* Detecta os possíveis comandos exigidas pelo usuário,
  * separando a operação do possível nome de diretórios e arquivos
@@ -581,22 +552,3 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
         printf("Comando nao reconhecido.\n");
     }
 }
-
-int insereNodoCluster(NodoCluster nodoCluster, int ponteiroCluster){
-    NodoCluster dir;
-    FILE *arq;
-    arq = fopen("ArqDisco.bin", "r+b");
-
-    fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * ponteiroCluster), SEEK_SET);
-    fwrite("\n", sizeof(char), 1, arq);
-
-    if(fwrite(&dir, sizeof(NodoCluster), 1, arq)){
-        fclose(arq);
-        return 1;
-    }else{
-        fclose(arq);
-        return 0;
-    }
-}
-
-

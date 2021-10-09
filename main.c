@@ -6,8 +6,7 @@
 #include <stdlib.h>
 #include "funcoes.h"
 
-int main()
-{
+int main(){
     char tabela[TAMTABELA], *m;
     int diretorioAtual = 0;
     int *p = &diretorioAtual;
