@@ -276,6 +276,35 @@ int adicionaFilho(char pai, char filho, MetaDados metaDados){
     return 1;
 }
 
+int pegaCaminho(int diretorioAtual, char* caminho, MetaDados metaDados){
+/* Cria uma string formatada do caminho no disco ate o diretorio atual
+ * Entrada:
+ *      inteiro (ponteiro), representando o cluster atual
+ *      ponteiro para uma string a ser preenchida com o caminho formatado
+ * Retorno:
+ *      1 caso o caminho seja montado com sucesso
+ *      0 caso haja falha na montagem
+ */
+    NodoCluster cluster;
+
+    if(pegaCluster(diretorioAtual, &cluster, metaDados)){
+        if(diretorioAtual != 0){
+            if(pegaCaminho(cluster.pai, caminho, metaDados)){
+                strcat(caminho, "/");
+                strcat(caminho, cluster.nome);
+                return 1;
+            }else{
+                return 0;
+            }
+        }else{
+            strcpy(caminho, "root");
+            return 1;
+        }
+    }else{
+        return 0;
+    }
+}
+
 int insereNodoCluster(NodoCluster nodoCluster, int ponteiroCluster){
     NodoCluster dir;
     FILE *arq;
@@ -383,7 +412,7 @@ int dir(char pai, MetaDados metaDados){
                 fclose(arq);
                 return 0;
             }
-            printf("%s  ", cluster.nome);
+            printf("%s\n", cluster.nome);
             //retorna para a lista de filhos
             fseek(arq, i, SEEK_SET);
             aux = fgetc(arq);
@@ -517,38 +546,59 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
     char *operacao = NULL, *nome = NULL;
     ListaStrings *listaComandos;
 
-    pegaOperacaoNome(comando, &operacao, &nome);
+    if(strcmp(comando, "")){   //se foi dado algum input
+        pegaOperacaoNome(comando, &operacao, &nome);
 
-    if(strcmp(operacao, "MKFILE") == 0){
-        printf("Criar Arquivo");
-    }else if(strstr(operacao, "MKDIR") != NULL){
-        clusterDisponivel = primeiraPosicaoDisponivel(tabela, metaDados);
-        if((nome != NULL) && (clusterDisponivel != -1) && (mkDir(nome, *dirAtual, clusterDisponivel, tabela, metaDados))){
-            printf("Diretorio Criado!\n");
+        //MKFILE
+        if(strcmp(operacao, "MKFILE") == 0){
+            printf("Criar Arquivo");
+
+        //MKDIR
+        }else if(strstr(operacao, "MKDIR") != NULL){
+            clusterDisponivel = primeiraPosicaoDisponivel(tabela, metaDados);
+            if((nome != NULL) && (clusterDisponivel != -1) && (mkDir(nome, *dirAtual, clusterDisponivel, tabela, metaDados))){
+                printf("Diretorio Criado!\n");
+            }else{
+                printf("Erro ao criar o diretorio\n");
+            }
+
+        //DIR
+        }else if(strstr(operacao, "DIR") != NULL){
+            dir(*dirAtual, metaDados);
+
+        //CD
+        }else if(strcmp(operacao, "CD") == 0){
+            listaComandos = NULL;
+            listaComandos = pegaSequenciaComandos(nome, listaComandos);
+            if(!cd(listaComandos, dirAtual, metaDados)){
+                printf("Caminho nao encontrado\n");
+            }
+            apagaLSE(listaComandos);
+        }
+
+        //RM
+        else if(strcmp(operacao, "RM") == 0){
+            printf("Deletar arquivo/direorio\n");
+
+        //EDIT
+        }else if(strstr(operacao, "EDIT") != NULL){
+            printf("Editar arquivo\n");
+
+        //MOVE
+        }else if(strcmp(operacao, "MOVE") == 0){
+            printf("Mover diretorio/arquivo\n");
+
+        //RENAME
+        }else if(strcmp(operacao, "RENAME") == 0){
+            printf("Renomear arquivo/diretorio\n");
+
+        //EXIT
+        }else if(strcmp(operacao, "EXIT") == 0){
+            *sair = 1;
+
+        //UNDEFINED
         }else{
-            printf("Erro ao criar o diretorio\n");
+            printf("Comando nao reconhecido.\n");
         }
-    }else if(strstr(operacao, "DIR") != NULL){
-        dir(*dirAtual, metaDados);
-    }else if(strcmp(operacao, "CD") == 0){
-        listaComandos = NULL;
-        listaComandos = pegaSequenciaComandos(nome, listaComandos);
-        if(!cd(listaComandos, dirAtual, metaDados)){
-            printf("Caminho nao encontrado\n");
-        }
-        apagaLSE(listaComandos);
-    }
-    else if(strcmp(operacao, "RM") == 0){
-        printf("Deletar arquivo/direorio\n");
-    }else if(strstr(operacao, "EDIT") != NULL){
-        printf("Editar arquivo\n");
-    }else if(strcmp(operacao, "MOVE") == 0){
-        printf("Mover diretorio/arquivo\n");
-    }else if(strcmp(operacao, "RENAME") == 0){
-        printf("Renomear arquivo/diretorio\n");
-    }else if(strcmp(operacao, "SAIR") == 0){
-        *sair = 1;
-    }else{
-        printf("Comando nao reconhecido.\n");
     }
 }

@@ -36,6 +36,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="funcoes.h" />
+		<Unit filename="listaStrings.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="listaStrings.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>

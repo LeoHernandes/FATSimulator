@@ -7,6 +7,8 @@
 #define INITABELA   8
 #define INITCLUSTER 264
 #define REALLOCSIZE 16
+#define TAMNOME     64
+#define TAMEXTENSAO 3
 
 /*------------*/
 /* ESTRUTURAS */
@@ -20,8 +22,8 @@ typedef struct TipoListaStrings{
 
 /* Árvore armazenando distribuição de arquivos e pastas num cluster */
 typedef struct TipoCluster{
-    char nome[50];
-    char extensao[3];
+    char nome[TAMNOME];
+    char extensao[TAMEXTENSAO];
     char pai;
     char marcador;
 }NodoCluster;
