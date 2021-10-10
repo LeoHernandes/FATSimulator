@@ -23,7 +23,7 @@ int inicializaArquivo(){
     MetaDados metaDados = {TAMTABELA, TAMCLUSTER, INITABELA, INITCLUSTER}; //Estrutura do tipo MetaDados, que inicia os meta dados referente ao disco.
     NodoCluster root = {"root", "", 'a', '*'};
 
-    if((arq = fopen("ArqDisco.bin", "r")) == NULL){        //se o arquivo não existe ainda
+    if((arq = fopen("ArqDisco.bin", "rb")) == NULL){        //se o arquivo não existe ainda
         if((arq = fopen("ArqDisco.bin", "a+b")) == NULL){  //se houve problema na abertura do arquivo
             printf("Erro na criacao do arquivo!\n");
             return 0;
