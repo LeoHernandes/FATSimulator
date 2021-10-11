@@ -7,21 +7,20 @@
 #include "funcoes.h"
 
 int main(){
-    char tabela[TAMTABELA], *input;
+    char tabela[TAMTABELA], *input, *caminho;
     int diretorioAtual = 0;
     int *ponteiroDir = &diretorioAtual;
     short int sair = 0;            //flag para manter o loop de escrita de comandos rodando
     MetaDados metaDados;
-    NodoCluster dir;
 
     if(inicializaArquivo()){
         if(pegaMetadados(&metaDados) && pegaTabela(tabela, metaDados)){ //se foi possivel carregar a tabela e os metadados
+            inicializaCaminho(&caminho);
             do{
-                pegaCluster(diretorioAtual, &dir, metaDados);
-                printf("%s:\\>", dir.nome);
+                printf("%s:\\>", caminho);
                 input = (char*) stringEntrada(stdin, TAMSTRING);
                 fflush(stdin);
-                detectaComando(input, ponteiroDir, tabela, &sair, metaDados);
+                detectaComando(input, &caminho, ponteiroDir, tabela, &sair, metaDados);
             }while(!sair);
         }else{
             printf("Nao foi possivel ler as informacoes necessarias\n");

@@ -2,7 +2,9 @@
 
 int inicializaArquivo();
 
-void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sair, MetaDados metaDados);
+void inicializaCaminho(char** caminho);
+
+void detectaComando(char comando[], char** caminho, int *dirAtual, char tabela[], short int* sair, MetaDados metaDados);
 
 int pegaMetadados(MetaDados* metaDados);
 

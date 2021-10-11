@@ -59,6 +59,15 @@ int inicializaArquivo(){
     return 1;
 }
 
+void inicializaCaminho(char** caminho){
+/* Aloca espaco na memoria para guardar a string 'root' na variavel caminho inicializando-a
+ * Entrada:
+ *      Ponteiro de ponteiro para string caminho
+ */
+    *caminho = (char *) malloc(5*sizeof(char));
+    strcpy(*caminho, "root");
+}
+
 char* stringEntrada(FILE* fp, size_t tamanho){
 /* Função que pega o input do usuário e estende o tamanho
  * da variável que guarda a string caso o input seja muito grande
@@ -322,6 +331,35 @@ int insereNodoCluster(NodoCluster nodoCluster, int ponteiroCluster){
     }
 }
 
+void voltaCaminho(char** caminho, char* nome){
+/* Funcao que dado uma string representando um caminho de diretorios,
+ * transforma numa string com um caminho a menos, de acordo com o comando 'CD .."
+ * Entrada:
+ *      Ponteiro para ponteiro da string que armazena o caminho
+ *      Ponteiro para string contendo o nome do diretorio
+ */
+    int index = strlen(*caminho) - 1;
+
+    while(*(*caminho + index) != '/'){    //procura a ultima barra no caminho
+        index--;
+    }
+
+    *(*caminho + index) = '\0';           //substitui por '\0'
+    *caminho = (char *) realloc(*caminho, sizeof(char) * (index + 1)); //realloca espaco de acordo com o novo tamanho
+}
+
+void avancaCaminho(char **caminho, char* nome){
+/* Funcao que avanca um caminho dado o caminho atual e o novo nome a ser adicionado
+ * Entrada:
+ *      Ponteiro para ponteiro da string que armazena o caminho
+ *      Ponteiro para string contendo o nome do diretorio
+ */
+    //realloca espaco para a nova string
+    *caminho = (char *) realloc(*caminho, sizeof(char) * (strlen(*caminho) + strlen(nome) + 2));
+    strcat(*caminho, "/");
+    strcat(*caminho, nome);
+}
+
 /*****************************************************************************************************/
 /*                                   FUNCOES PRINCIPAIS                                              */
 /*****************************************************************************************************/
@@ -533,7 +571,7 @@ int cd(ListaStrings *listaComandos, int *diretorioAtual, MetaDados metaDados){
     return(cdRecursiva(listaComandos, diretorioAtual, *diretorioAtual, metaDados));
 }
 
-void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sair, MetaDados metaDados){
+void detectaComando(char comando[], char** caminho, int *dirAtual, char tabela[], short int* sair, MetaDados metaDados){
 /* Detecta os possíveis comandos exigidas pelo usuário,
  * separando a operação do possível nome de diretórios e arquivos
  * Entrada:
@@ -570,8 +608,13 @@ void detectaComando(char comando[], int *dirAtual, char tabela[], short int* sai
         }else if(strcmp(operacao, "CD") == 0){
             listaComandos = NULL;
             listaComandos = pegaSequenciaComandos(nome, listaComandos);
+
             if(!cd(listaComandos, dirAtual, metaDados)){
                 printf("Caminho nao encontrado\n");
+            }else if(!strcmp(nome, "..")){    //se foi feito CD com sucesso e o comando foi ".."
+                voltaCaminho(caminho, nome);
+            }else{                            //senão, concatena o nome do novo caminho
+                avancaCaminho(caminho, nome);
             }
             apagaLSE(listaComandos);
         }
