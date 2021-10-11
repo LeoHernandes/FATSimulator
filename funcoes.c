@@ -365,7 +365,7 @@ void avancaCaminho(char **caminho, char* nome){
 /*****************************************************************************************************/
 
 int mkDir(char* nome, char clusterPai, char cluster, char tabela[], MetaDados metaDados){
-/* Cria um diretório no primeiro cluster disponível dado o diretório atual
+/* Cria um diretorio no primeiro cluster disponível dado o diretorio atual
  * Entrada:
  *      String com o nome do diretorio dado pelo usuario
  *      Ponteiro (char) para o pai do diretório a ser criado
@@ -393,7 +393,7 @@ int mkDir(char* nome, char clusterPai, char cluster, char tabela[], MetaDados me
         return 0;
     }
 
-    //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretório
+    //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretorio
     fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * cluster), SEEK_SET);
     //Escreve o cluster no arquivo
     fwrite(&novo, sizeof(NodoCluster), 1, arq);
@@ -450,10 +450,13 @@ int dir(char pai, MetaDados metaDados){
                 fclose(arq);
                 return 0;
             }
-            printf("%s\n", cluster.nome);
+            printf("%s", cluster.nome);
+            //se tem extensao, printa também
+            if(strcmp(cluster.extensao, "")) printf(".%s", cluster.extensao);
             //retorna para a lista de filhos
             fseek(arq, i, SEEK_SET);
             aux = fgetc(arq);
+            if(aux != 0) printf("\n"); //pula de linha se existem mais filhos
         }
     }
     fclose(arq);
@@ -571,6 +574,56 @@ int cd(ListaStrings *listaComandos, int *diretorioAtual, MetaDados metaDados){
     return(cdRecursiva(listaComandos, diretorioAtual, *diretorioAtual, metaDados));
 }
 
+int mkFile(char* nome, char* extensao, char clusterPai, char cluster, char tabela[], MetaDados metaDados){
+/* Cria um arquivo no primeiro cluster disponível dado o diretório atual
+ * Entrada:
+ *      String com o nome do arquivo dado pelo usuario
+ *      String com a extensao do arquivo
+ *      Ponteiro (char) para o pai do diretório a ser criado
+ *      Ponteiro (char) para o cluster diponível
+ *      Tabela FAT que armazena os ponteiros dos discos
+ * Retorno:
+ *      1 caso seja realizado com sucesso
+ *      0 caso a criação falhe
+ */
+    FILE *arq;
+    NodoCluster novo = {"", "", 'a', '*'};
+
+    //Marca o primeiro cluster disponivel como ocupado e escreve no arquivo
+    if(!alteraTabelaFat(tabela, cluster, metaDados)){
+        printf("Erro ao atualizar a tabela\n");
+        return 0;
+    }
+
+    //Cria o novo Cluster
+    strcpy(novo.nome, nome);
+    strcpy(novo.extensao, extensao);
+    novo.pai = clusterPai;
+
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
+
+    //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo arquivo
+    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * cluster), SEEK_SET);
+    //Escreve o cluster no arquivo
+    fwrite(&novo, sizeof(NodoCluster), 1, arq);
+
+    fclose(arq);
+    if(ferror(arq)){
+        printf("Erro ao gravar o novo cluster\n");
+        return 0;
+    }
+
+    if(!adicionaFilho(clusterPai, cluster, metaDados)){  //se houve erro ao adicionar um filho na lista de filhos
+        printf("Erro ao atualizar o diretorio pai\n");
+        return 0;
+    }
+
+    return 1;
+}
+
 void detectaComando(char comando[], char** caminho, int *dirAtual, char tabela[], short int* sair, MetaDados metaDados){
 /* Detecta os possíveis comandos exigidas pelo usuário,
  * separando a operação do possível nome de diretórios e arquivos
@@ -581,18 +634,14 @@ void detectaComando(char comando[], char** caminho, int *dirAtual, char tabela[]
  *      Flag que controla o comando de saida do usuario
  */
     int clusterDisponivel;
-    char *operacao = NULL, *nome = NULL;
+    char *operacao = NULL, *nome = NULL, *extensao = NULL;
     ListaStrings *listaComandos;
 
     if(strcmp(comando, "")){   //se foi dado algum input
         pegaOperacaoNome(comando, &operacao, &nome);
 
-        //MKFILE
-        if(strcmp(operacao, "MKFILE") == 0){
-            printf("Criar Arquivo");
-
         //MKDIR
-        }else if(strstr(operacao, "MKDIR") != NULL){
+        if(strstr(operacao, "MKDIR") != NULL){
             clusterDisponivel = primeiraPosicaoDisponivel(tabela, metaDados);
             if((nome != NULL) && (clusterDisponivel != -1) && (mkDir(nome, *dirAtual, clusterDisponivel, tabela, metaDados))){
                 printf("Diretorio Criado!\n");
@@ -617,10 +666,20 @@ void detectaComando(char comando[], char** caminho, int *dirAtual, char tabela[]
                 avancaCaminho(caminho, nome);
             }
             apagaLSE(listaComandos);
-        }
+
+        //MKFILE
+        }else if(strcmp(operacao, "MKFILE") == 0){
+            clusterDisponivel = primeiraPosicaoDisponivel(tabela, metaDados);
+            nome = strtok(nome, ".");
+            extensao = strtok(NULL, ".");
+            if((nome != NULL) && (extensao != NULL) && (clusterDisponivel != -1) && (mkFile(nome, extensao, *dirAtual, clusterDisponivel, tabela, metaDados))){
+                printf("Arquivo Criado!\n");
+            }else{
+                printf("Erro ao criar o arquivo\n");
+            }
 
         //RM
-        else if(strcmp(operacao, "RM") == 0){
+        }else if(strcmp(operacao, "RM") == 0){
             printf("Deletar arquivo/direorio\n");
 
         //EDIT
