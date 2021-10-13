@@ -8,8 +8,8 @@
 
 int main(){
     char tabela[TAMTABELA], *input, *caminho;
-    int diretorioAtual = 0;
-    int *ponteiroDir = &diretorioAtual;
+    char diretorioAtual = 0;
+    char *ponteiroDir = &diretorioAtual;
     short int sair = 0;            //flag para manter o loop de escrita de comandos rodando
     MetaDados metaDados;
 
