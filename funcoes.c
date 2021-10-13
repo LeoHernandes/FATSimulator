@@ -442,6 +442,7 @@ void reconstroiCaminho(char **caminho, ListaStrings *listaComandos){
         aux = aux->prox;
     }
 }
+
 /*****************************************************************************************************/
 /*                                   FUNCOES PRINCIPAIS                                              */
 /*****************************************************************************************************/
@@ -739,15 +740,24 @@ int rm(ListaStrings *listaCaminho, char *diretorioAtual, char *diretorioSolicita
  *      0 caso o caminho nao tenha sido encontrado
  */
     *diretorioSolicitado = *diretorioAtual;
+    ListaStrings *aux;
 
     //Verifica se o caminho recebido é vazio
     if(listaCaminho == NULL){
         return 0;//Se sim, retorna 0, indicando erro
-    }else if(strcmp(listaCaminho->comando, "root") == 0){//Verifica se o caminho solicitado é o root
-        return 0;//Se sim, retorna 0, indicando erro
+    }else if(strcmp(listaCaminho->comando, "root") == 0){    //Verifica se o caminho solicitado é o root
+        if(listaCaminho->prox != NULL){         //se for um caminho maior que apenas 'root'
+            *diretorioAtual = 0;                //coloca o usuario no root
+            aux = listaCaminho->prox;           //coloca o inicio do caminho na segunda string da lista
+        }else{
+            return 0;                           //Se for apenas 'root', nao deleta
+        }
+    }else{
+        aux = listaCaminho;
     }
+
     //Se nenhum dos casos anteriores for "pego" chama a função recursiva
-    return(rmRecursiva(listaCaminho, diretorioSolicitado, *diretorioSolicitado, metaDados));
+    return(rmRecursiva(aux, diretorioSolicitado, *diretorioSolicitado, metaDados));
 
 }
 
