@@ -7,7 +7,7 @@
 1634132020 c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\funcoes.h
 	"estruturas.h"
 
-1634133319 source:c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\funcoes.c
+1634151057 source:c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\funcoes.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
@@ -50,7 +50,7 @@
 1633814357 c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\listastrings.h
 	"estruturas.h"
 
-1633815049 source:c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\listastrings.c
+1634149098 source:c:\users\55519\documents\faculdade\3° semestre\arquitetura e organização de computadores ii\fatsimulator\listastrings.c
 	<stdlib.h>
 	<string.h>
 	"estruturas.h"

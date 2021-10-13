@@ -313,12 +313,11 @@ int insereNodoCluster(NodoCluster nodoCluster, char ponteiroCluster){
     }
 }
 
-void voltaCaminho(char** caminho, char* nome){
+void voltaCaminho(char** caminho){
 /* Funcao que dado uma string representando um caminho de diretorios,
  * transforma numa string com um caminho a menos, de acordo com o comando 'CD .."
  * Entrada:
  *      Ponteiro para ponteiro da string que armazena o caminho
- *      Ponteiro para string contendo o nome do diretorio
  */
     int index = strlen(*caminho) - 1;
 
@@ -330,16 +329,29 @@ void voltaCaminho(char** caminho, char* nome){
     *caminho = (char *) realloc(*caminho, sizeof(char) * (index + 1)); //realloca espaco de acordo com o novo tamanho
 }
 
-void avancaCaminho(char **caminho, char* nome){
+void avancaCaminho(char **caminho, ListaStrings *listaComandos){
 /* Funcao que avanca um caminho dado o caminho atual e o novo nome a ser adicionado
  * Entrada:
  *      Ponteiro para ponteiro da string que armazena o caminho
  *      Ponteiro para string contendo o nome do diretorio
  */
+    int tamanhoRealloc = 0;
+    ListaStrings *aux;
+
+    aux = listaComandos;
+    while(aux != NULL){
+        tamanhoRealloc += strlen(aux->comando) + 1; //soma o tamanho da nova string a ser concatenada junto com as barras
+        aux = aux->prox;
+    }
+
     //realloca espaco para a nova string
-    *caminho = (char *) realloc(*caminho, sizeof(char) * (strlen(*caminho) + strlen(nome) + 2));
-    strcat(*caminho, "/");
-    strcat(*caminho, nome);
+    *caminho = (char *) realloc(*caminho, sizeof(char) * (strlen(*caminho) + tamanhoRealloc + 1)); //realoca contando com o '\0'
+    aux = listaComandos;
+    while(aux != NULL){
+        strcat(*caminho, "/");
+        strcat(*caminho, aux->comando);  //concatena todos os novos caminhos
+        aux = aux->prox;
+    }
 }
 
 /*****************************************************************************************************/
@@ -484,15 +496,13 @@ int cdRecursiva(ListaStrings *listaComandos, char *diretorioAtual, char subdir, 
     //Posiciona o ponteiro no cluster atual
     fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * subdir), SEEK_SET);
 
-    //Se nenhuma das opções acima for satisfeita, inicia a busca, com recursão,
-    //até encontar, ou não, o caminho solicitado
     //Encontra o marcador de inicio da lista de filhos
     while(aux != '*'){
         aux = fgetc(arq);
     }
     aux = fgetc(arq);
 
-    if(aux == 0 || aux == 'B'){                           //Se o primeiro filho for igual a zero, a pasta pai não tem filho
+    if(aux == 0 || aux == 'B'){             //Se o primeiro filho for igual a zero, a pasta pai não tem filho
         fclose(arq);                        //Fecha o arquivo e retorna 0, indicando erro.
         return 0;
     }else{                                  //Se não, busca se há uma pasta com o nome solicitado no caminho indicado
@@ -500,6 +510,7 @@ int cdRecursiva(ListaStrings *listaComandos, char *diretorioAtual, char subdir, 
             i = ftell(arq);                 //guarda a posição atual na lista de filhos
             if(!pegaCluster(aux, &dir, metaDados)){    //pega o cluster indicado pelo filho
                 printf("Erro na leitura do cluster\n");
+                fclose(arq);
                 return 0;
             }
             //Verifica se o nome da pasta encontrada na lista de filhos possui o mesmo nome do caminho solicitado
@@ -517,14 +528,12 @@ int cdRecursiva(ListaStrings *listaComandos, char *diretorioAtual, char subdir, 
             fseek(arq, i, SEEK_SET);
             aux = fgetc(arq);
         }
-    }
-
-    fclose(arq);
-    if(ferror(arq)){
-        printf("Erro na leitura do arquivo\n");
+        fclose(arq);
+        if(ferror(arq))
+            printf("Erro na leitura do arquivo\n");
         return 0;
     }
-    return 1;
+
 }
 
 int cd(ListaStrings *listaComandos, char *diretorioAtual, MetaDados metaDados){
@@ -807,9 +816,9 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, char tabela[
             if(!cd(listaComandos, dirAtual, metaDados)){
                 printf("Caminho nao encontrado\n");
             }else if(!strcmp(nome, "..")){    //se foi feito CD com sucesso e o comando foi ".."
-                voltaCaminho(caminho, nome);
+                voltaCaminho(caminho);
             }else{                            //senão, concatena o nome do novo caminho
-                avancaCaminho(caminho, nome);
+                avancaCaminho(caminho, listaComandos);
             }
             apagaLSE(listaComandos);
 
