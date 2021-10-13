@@ -313,6 +313,69 @@ int insereNodoCluster(NodoCluster nodoCluster, char ponteiroCluster){
     }
 }
 
+int encontraCaminho(ListaStrings *listaComandos, char *diretorioAtual, char subdir, MetaDados metaDados){
+/* Dado o diretorio atual e um caminho, testa se o caminho existe e seta o diretorio atual para o caminho final
+ * Entrada:
+ *      Uma lista de strings, que representa o caminho de um diretório/arquivo
+ *      Inteiro que representa o diretório em que foi realizado a operação
+ *      Char que representa um subdiretorio para a funcao ser chamada recursivamente
+ *      MetaDados metadados do disco que serão utilizados para realizar as operações com o fseek.
+ * Retorno:
+ *      1 caso o caminho tenha sido encontrado
+ *      0 caso o caminho nao tenha sido encontrado
+ */
+    char aux = 0;
+    long i = 0;
+    FILE *arq;
+    NodoCluster dir;
+
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
+
+    //Posiciona o ponteiro no cluster atual
+    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * subdir), SEEK_SET);
+
+    //Encontra o marcador de inicio da lista de filhos
+    while(aux != '*'){
+        aux = fgetc(arq);
+    }
+    aux = fgetc(arq);
+
+    if(aux == 0 || aux == 'B'){             //Se o primeiro filho for igual a zero, a pasta pai não tem filho
+        fclose(arq);                        //Fecha o arquivo e retorna 0, indicando erro.
+        return 0;
+    }else{                                  //Se não, busca se há uma pasta com o nome solicitado no caminho indicado
+        while(aux != 0){
+            i = ftell(arq);                 //guarda a posição atual na lista de filhos
+            if(!pegaCluster(aux, &dir, metaDados)){    //pega o cluster indicado pelo filho
+                printf("Erro na leitura do cluster\n");
+                fclose(arq);
+                return 0;
+            }
+            //Verifica se o nome da pasta encontrada na lista de filhos possui o mesmo nome do caminho solicitado
+            if(strcmp(listaComandos->comando, dir.nome) == 0){
+                //Se sim, verifica se o próximo elemento da lista de comandos é 0
+                if(listaComandos->prox == NULL){
+                    //Caso seja, seta o diretório buscado como atual e retorna 1
+                    *diretorioAtual = aux;
+                    fclose(arq);
+                    return 1;
+                }else{//Se o próximo elemento da lista de comandos não é NULL, chama a função recursivamente.
+                    return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados);
+                }
+            }
+            fseek(arq, i, SEEK_SET);
+            aux = fgetc(arq);
+        }
+        fclose(arq);
+        if(ferror(arq))
+            printf("Erro na leitura do arquivo\n");
+        return 0;
+    }
+}
+
 void voltaCaminho(char** caminho){
 /* Funcao que dado uma string representando um caminho de diretorios,
  * transforma numa string com um caminho a menos, de acordo com o comando 'CD .."
@@ -333,7 +396,7 @@ void avancaCaminho(char **caminho, ListaStrings *listaComandos){
 /* Funcao que avanca um caminho dado o caminho atual e o novo nome a ser adicionado
  * Entrada:
  *      Ponteiro para ponteiro da string que armazena o caminho
- *      Ponteiro para string contendo o nome do diretorio
+ *      Lista de strings com o caminho todo
  */
     int tamanhoRealloc = 0;
     ListaStrings *aux;
@@ -354,6 +417,31 @@ void avancaCaminho(char **caminho, ListaStrings *listaComandos){
     }
 }
 
+void reconstroiCaminho(char **caminho, ListaStrings *listaComandos){
+/* Reconstroi todo o caminho da string, limpando-a e colocando o novo caminho dado pelo usuario
+ * Entrada:
+ *      Ponteiro para ponteiro da string que armazena o caminho
+ *      Lista de strings com o caminho todo
+ */
+    int tamanhoRealloc = 0;
+    ListaStrings *aux;
+
+    aux = listaComandos;
+    while(aux != NULL){
+        tamanhoRealloc += strlen(aux->comando) + 1; //soma o tamanho da nova string a ser concatenada junto com as barras
+        aux = aux->prox;
+    }
+
+    //realloca espaco para a nova string
+    *caminho = (char *) realloc(*caminho, sizeof(char) * (tamanhoRealloc + 1)); //realoca contando com o '\0'
+    strcpy(*caminho, "root");  //copia o 'root'
+    aux = listaComandos->prox;
+    while(aux != NULL){
+        strcat(*caminho, "/");
+        strcat(*caminho, aux->comando);  //concatena todos os novos caminhos se houverem
+        aux = aux->prox;
+    }
+}
 /*****************************************************************************************************/
 /*                                   FUNCOES PRINCIPAIS                                              */
 /*****************************************************************************************************/
@@ -472,70 +560,6 @@ int dir(char pai, MetaDados metaDados){
     return 1;
 }
 
-int cdRecursiva(ListaStrings *listaComandos, char *diretorioAtual, char subdir, MetaDados metaDados){
-/* Caso o comando de CD nao for '..', precisamos recursivamente navegar pelas pastas
- * Entrada:
- *      Uma lista de strings, que representa o caminho de um diretório/arquivo
- *      Inteiro que representa o diretório em que foi realizado a operação
- *      Char que representa um subdiretorio para a funcao ser chamada recursivamente
- *      MetaDados metadados do disco que serão utilizados para realizar as operações com o fseek.
- * Retorno:
- *      1 caso o caminho tenha sido encontrado
- *      0 caso o caminho nao tenha sido encontrado
- */
-    char aux = 0;
-    long i = 0;
-    FILE *arq;
-    NodoCluster dir;
-
-    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
-        printf("Erro na abertura do arquivo\n");
-        return 0;
-    }
-
-    //Posiciona o ponteiro no cluster atual
-    fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * subdir), SEEK_SET);
-
-    //Encontra o marcador de inicio da lista de filhos
-    while(aux != '*'){
-        aux = fgetc(arq);
-    }
-    aux = fgetc(arq);
-
-    if(aux == 0 || aux == 'B'){             //Se o primeiro filho for igual a zero, a pasta pai não tem filho
-        fclose(arq);                        //Fecha o arquivo e retorna 0, indicando erro.
-        return 0;
-    }else{                                  //Se não, busca se há uma pasta com o nome solicitado no caminho indicado
-        while(aux != 0){
-            i = ftell(arq);                 //guarda a posição atual na lista de filhos
-            if(!pegaCluster(aux, &dir, metaDados)){    //pega o cluster indicado pelo filho
-                printf("Erro na leitura do cluster\n");
-                fclose(arq);
-                return 0;
-            }
-            //Verifica se o nome da pasta encontrada na lista de filhos possui o mesmo nome do caminho solicitado
-            if(strcmp(listaComandos->comando, dir.nome) == 0){
-                //Se sim, verifica se o próximo elemento da lista de comandos é 0
-                if(listaComandos->prox == NULL){
-                    //Caso seja, seta o diretório buscado como atual e retorna 1
-                    *diretorioAtual = aux;
-                    fclose(arq);
-                    return 1;
-                }else{//Se o próximo elemento da lista de comandos não é NULL, chama a função recursivamente.
-                    return cdRecursiva(listaComandos->prox, diretorioAtual, aux, metaDados);
-                }
-            }
-            fseek(arq, i, SEEK_SET);
-            aux = fgetc(arq);
-        }
-        fclose(arq);
-        if(ferror(arq))
-            printf("Erro na leitura do arquivo\n");
-        return 0;
-    }
-
-}
-
 int cd(ListaStrings *listaComandos, char *diretorioAtual, MetaDados metaDados){
 /* Muda o diretorio atual para algum subdiretorio
  * Entrada:
@@ -547,6 +571,7 @@ int cd(ListaStrings *listaComandos, char *diretorioAtual, MetaDados metaDados){
  */
     NodoCluster dir;
     FILE *arq;
+    ListaStrings *aux;
 
     //Verifica se a lista de comando é vazia
     if(listaComandos == NULL){
@@ -563,16 +588,26 @@ int cd(ListaStrings *listaComandos, char *diretorioAtual, MetaDados metaDados){
     fseek(arq, metaDados.initCluster + 2 + ((metaDados.tamCluster + 1) * (*diretorioAtual)), SEEK_SET);
     fread(&dir, sizeof(NodoCluster), 1, arq);
     fclose(arq);
-    if(strcmp(listaComandos->comando, "..") == 0 && !ferror(arq)){  //Verifica se o comando digitado foi o de "voltar"
-        if(*diretorioAtual != 0){                                   //Se o diretório atual é diferente do root, volta para a pasta "pai"
-            *diretorioAtual = dir.pai;
-            return 1;
-        }                                                           //Senao, fecha o arquivo e retorna 1, indicando erro.
-        return 0;
+    if(!ferror(arq)){
+        if(strcmp(listaComandos->comando, "..") == 0){     //Verifica se o comando digitado foi o de "voltar"
+            if(*diretorioAtual != 0){                      //Se o diretório atual é diferente do root, volta para a pasta "pai"
+                *diretorioAtual = dir.pai;
+                return 1;
+            }                                              //Senao, fecha o arquivo e retorna 1, indicando erro.
+            return 0;
+        }else if(strcmp(listaComandos->comando, "root") == 0){ //se o comando comecar com 'root'
+            *diretorioAtual = 0;                               //coloca o usuario no primeiro diretorio
+            aux = listaComandos->prox;                         //comeca a lista de comandos pelo segundo comando
+        }else{
+            aux = listaComandos;                               //caso contrario apenas navega pelo caminho dado
+        }
+        //Se nao for o comando '..', percorre recursivamente pelas pastas
+        if(aux != NULL)
+            return(encontraCaminho(aux, diretorioAtual, *diretorioAtual, metaDados));
+        return 1;
     }
-
-    //Senao for o comando '..', percorre recursivamente pelas pastas
-    return(cdRecursiva(listaComandos, diretorioAtual, *diretorioAtual, metaDados));
+    printf("Erro na leitura do cluster\n");
+    return 0;
 }
 
 int mkFile(char* nome, char* extensao, char clusterPai, char cluster, char tabela[], MetaDados metaDados){
@@ -817,6 +852,8 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, char tabela[
                 printf("Caminho nao encontrado\n");
             }else if(!strcmp(nome, "..")){    //se foi feito CD com sucesso e o comando foi ".."
                 voltaCaminho(caminho);
+            }else if(!strcmp(listaComandos->comando, "root")){ //se o comando comecou com '/root'
+                reconstroiCaminho(caminho, listaComandos);
             }else{                            //senão, concatena o nome do novo caminho
                 avancaCaminho(caminho, listaComandos);
             }
