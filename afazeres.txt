@@ -1,0 +1,5 @@
+O que falta:
+Função Rename
+Função Move
+Função Edit
+Corrigir função Remove
