@@ -2,7 +2,7 @@
 /* CONSTANTES */
 /*------------*/
 
-#define TAMCLUSTER  32000
+#define TAMCLUSTER  32
 #define TAMTABELA   256
 #define INITABELA   8
 #define INITCLUSTER 264
