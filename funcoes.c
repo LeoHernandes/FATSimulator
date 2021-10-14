@@ -31,13 +31,11 @@ int inicializaArquivo(){
 
         //criacao dos metadados
         fwrite(&metaDados, sizeof(MetaDados), 1, arq);      //escreve os metadados
-        fwrite("\n", sizeof(char), 1, arq);
 
         //criacao da tabela FAT
         fwrite(&FF, sizeof(char), 1, arq);                  //preenche a primeira posição da tabela FAT para o diretório root
         for(i = 0; i < TAMTABELA - 1; i++)
             fwrite(&zero, sizeof(char), 1, arq);            //preenche o restante da tabela
-        fwrite("\n", sizeof(char), 1, arq);
 
         //Laco que faz a criacao dos 256 clusters
         fwrite(&root, sizeof(NodoCluster), 1, arq);         //armazena o root no primeiro cluster
@@ -45,7 +43,6 @@ int inicializaArquivo(){
             fwrite(&zero, sizeof(char), 1, arq);
 
         for(i = 0; i < TAMTABELA - 1; i++){
-            fwrite("\n", sizeof(char), 1, arq);
             for(j = 0; j < (TAMCLUSTER * 1000); j++)
                 fwrite(&zero, sizeof(char), 1, arq);   //armazena os outros 255 clusters
         }
@@ -154,7 +151,7 @@ int pegaCluster(char ponteiroCluster, NodoCluster* cluster, MetaDados metaDados)
         return 0;
     }
 
-    fseek(arq, metaDados.initCluster + 2 + (((metaDados.tamCluster * 1000) + 1) * ponteiroCluster), SEEK_SET);
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * ponteiroCluster), SEEK_SET);
     fread(cluster, sizeof(NodoCluster), 1, arq);
 
     fclose(arq);
@@ -175,7 +172,7 @@ int primeiraPosicaoDisponivel(char *clusterDisponivel, MetaDados metaDados){
  *      1 caso tenha achado posicao diponivel
  *      0 caso nao tenha posicao disponivel ou houve problema com o arquivo
  */
-    char aux;
+    char aux = 255;
     short int iterador = -1;
     FILE *arq;
 
@@ -184,13 +181,12 @@ int primeiraPosicaoDisponivel(char *clusterDisponivel, MetaDados metaDados){
         return 0;
     }
 
-    fseek(arq, metaDados.initIndice + 1, SEEK_SET);  //vai ate a tabela FAT
+    fseek(arq, metaDados.initIndice, SEEK_SET);  //vai ate a tabela FAT
 
-    do{
+    while(iterador < metaDados.tamIndice && aux != 0 && aux != 'B'){
         aux = fgetc(arq);
         iterador++;                                  //itera ate achar posicao disponivel ou chegar no final da tabela
-    }while(iterador < metaDados.tamIndice && aux != 0 && aux != 'B');
-
+    }
     fclose(arq);
     if(!ferror(arq)){                               //se nao houve problema com o arquivo
         if(iterador == metaDados.tamIndice)         //e se chegou no final da tabela
@@ -220,7 +216,7 @@ int alteraTabelaFat(char valor, char ponteiroCluster, MetaDados metaDados){
         return 0;
     }
 
-    fseek(arq, metaDados.initIndice + 1 + ponteiroCluster, SEEK_SET); //vai ate o indice correto da tabela FAT
+    fseek(arq, metaDados.initIndice + ponteiroCluster, SEEK_SET); //vai ate o indice correto da tabela FAT
     fwrite(&valor, sizeof(char), 1, arq);                              //sobrescreve com o novo valor
 
     fclose(arq);
@@ -250,7 +246,7 @@ int adicionaFilho(char pai, char filho, MetaDados metaDados){
     }
 
     //Posiciona o ponteiro do arquivo no cluster onde será inserido um filho
-    fseek(arq, metaDados.initCluster + 2 + (((metaDados.tamCluster * 1000) + 1) * pai), SEEK_SET);
+    fseek(arq, metaDados.initCluster +((metaDados.tamCluster * 1000) * pai), SEEK_SET);
 
     //Percorre todos os caracteres do cluster até encontrar o marcador '*'
     while(aux != '*'){
@@ -293,7 +289,7 @@ int removeFilho(char pai, char filho, MetaDados metaDados){
     }
 
     //Posiciona o ponteiro do arquivo no cluster onde será removido um filho
-    fseek(arq, metaDados.initCluster + 2 + (((metaDados.tamCluster * 1000) + 1) * pai), SEEK_SET);
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * pai), SEEK_SET);
 
     //Percorre todos os caracteres do cluster até encontrar o marcador '*'
     while(aux != '*'){
@@ -307,7 +303,6 @@ int removeFilho(char pai, char filho, MetaDados metaDados){
 
     fseek(arq, -1, SEEK_CUR);
     fwrite(&B, sizeof(char), 1, arq);
-
     fclose(arq);
     if(ferror(arq)){
         printf("Erro na escrita do arquivo\n");
@@ -364,7 +359,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
     }
 
     //Posiciona o ponteiro no cluster atual
-    fseek(arq, metaDados.initCluster + 2 + (((metaDados.tamCluster * 1000) + 1) * subdir), SEEK_SET);
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * subdir), SEEK_SET);
 
     //Encontra o marcador de inicio da lista de filhos
     while(aux != '*'){
@@ -392,6 +387,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
                         fclose(arq);
                         return aux;
                     }else{//Se o próximo elemento da lista de comandos não é NULL, chama a função recursivamente.
+                        fclose(arq);
                         return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados);
                     }
                 }
@@ -508,16 +504,15 @@ int mkDir(char* nome, char clusterPai, char cluster, MetaDados metaDados){
         printf("Erro na abertura do arquivo\n");
         return 0;
     }
-
     //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretorio
-    fseek(arq, metaDados.initCluster + 2 + (((metaDados.tamCluster * 1000) + 1) * cluster), SEEK_SET);
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000)  * cluster), SEEK_SET);
     //Zera o cluster
     while( i < (metaDados.tamCluster * 1000)){
         fwrite(&zero, sizeof(char), 1, arq);
         i++;
     }
     //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretorio
-    fseek(arq, metaDados.initCluster + 2 + (((metaDados.tamCluster * 1000) + 1) * cluster), SEEK_SET);
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * cluster), SEEK_SET);
     //Escreve o cluster no arquivo
     fwrite(&novo, sizeof(NodoCluster), 1, arq);
 
@@ -555,7 +550,7 @@ int dir(char pai, MetaDados metaDados){
     }
 
     //Posiciona o cursor do arquivo no cluster que desejamos listar as informações
-    fseek(arq, metaDados.initCluster + 2 + (((metaDados.tamCluster * 1000) + 1) * pai), SEEK_SET);
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * pai), SEEK_SET);
 
     //percorre o cluster até encontrar o marcador '*'
     while(aux != '*'){
@@ -565,7 +560,7 @@ int dir(char pai, MetaDados metaDados){
     //Verifica se a lista de filhos do cluster está vazia.
     if(aux == 0){
         printf("<vazio>");
-    }else{     //Se não, percorre a lista de filhos até o final e printa os nomes na tela.
+    }    //Se não, percorre a lista de filhos até o final e printa os nomes na tela.
         while(aux != 0){
             if(aux != 'B'){ //se nao for um filho removido
                 //guarda a posição do filho atual
@@ -584,7 +579,6 @@ int dir(char pai, MetaDados metaDados){
             }
             aux = fgetc(arq);
         }
-    }
     fclose(arq);
     printf("\n");
 
@@ -622,7 +616,7 @@ int cd(ListaStrings *listaComandos, char *diretorioAtual, MetaDados metaDados){
     }
 
     //Pega as informacoes do diretorio atual
-    fseek(arq, metaDados.initCluster + 2 + (((metaDados.tamCluster * 1000) + 1) * (*diretorioAtual)), SEEK_SET);
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * (*diretorioAtual)), SEEK_SET);
     fread(&dir, sizeof(NodoCluster), 1, arq);
     fclose(arq);
     if(!ferror(arq)){
@@ -685,7 +679,7 @@ int mkFile(char* nome, char* extensao, char clusterPai, char cluster, MetaDados 
     }
 
     //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo arquivo
-    fseek(arq, metaDados.initCluster + 2 + (((metaDados.tamCluster * 1000) + 1) * cluster), SEEK_SET);
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * cluster), SEEK_SET);
     //Escreve o cluster no arquivo
     fwrite(&novo, sizeof(NodoCluster), 1, arq);
 
@@ -760,7 +754,7 @@ int removeCluster(char cluster, MetaDados metaDados){
     }
 
     //Posiciona o cursor do arquivo no cluster que vamos remover
-    fseek(arq, metaDados.initCluster + 2 + (((metaDados.tamCluster * 1000) + 1) * cluster), SEEK_SET);
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * cluster), SEEK_SET);
 
     while(aux != '*'){              //Posiciona o cursor na lista de filhos do cluster
         aux = fgetc(arq);
