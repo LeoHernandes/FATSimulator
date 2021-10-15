@@ -95,7 +95,7 @@ char* stringEntrada(FILE* fp, size_t tamanho){
     return realloc(str, sizeof(*str)*index);
 }
 
-void pegaOperacaoNome(char comando[], char** operacao, char** nome){
+void pegaOperacaoNome(char comando[], char** operacao, char** nome, char** resto){
 /* Dado um comando do usuario, pega a operacao e o possível nome do diretorio ou arquivo fornecido
  * Entrada:
  *      String do comando todo fornecido pelo usuário
@@ -104,6 +104,7 @@ void pegaOperacaoNome(char comando[], char** operacao, char** nome){
  */
     *operacao = strtok(comando, " ");
     *nome = strtok(NULL, " ");
+    *resto = strtok(NULL, " ");
 }
 
 int pegaMetadados(MetaDados* metaDados){
@@ -540,6 +541,7 @@ int dir(char pai, MetaDados metaDados){
  *      0, caso haja falha na leitura
  */
     long i = 0;
+    int temFilho = 0;
     char aux = 0;
     FILE *arq;
     NodoCluster cluster;
@@ -557,10 +559,7 @@ int dir(char pai, MetaDados metaDados){
         aux = fgetc(arq);
     }
     aux = fgetc(arq);
-    //Verifica se a lista de filhos do cluster está vazia.
-    if(aux == 0){
-        printf("<vazio>");
-    }    //Se não, percorre a lista de filhos até o final e printa os nomes na tela.
+   //Se não, percorre a lista de filhos até o final e printa os nomes na tela.
         while(aux != 0){
             if(aux != 'B'){ //se nao for um filho removido
                 //guarda a posição do filho atual
@@ -570,6 +569,7 @@ int dir(char pai, MetaDados metaDados){
                     fclose(arq);
                     return 0;
                 }
+                temFilho = 1;
                 printf("%s", cluster.nome);
                 //se tem extensao, printa tambem
                 if(strcmp(cluster.extensao, "")) printf(".%s", cluster.extensao);
@@ -580,8 +580,10 @@ int dir(char pai, MetaDados metaDados){
             aux = fgetc(arq);
         }
     fclose(arq);
+    if(temFilho == 0){
+        printf("<vazio>\n");
+    }
     printf("\n");
-
     if(ferror(arq)){
         printf("Nao foi possivel ler todos os subdiretorios\n");
         return 0;
@@ -776,6 +778,73 @@ int removeCluster(char cluster, MetaDados metaDados){
 
 }
 
+int move(ListaStrings *origem, ListaStrings *destino, char *diretorioAtual, MetaDados metaDados){
+    FILE *arq;
+    char ponteiroOrigem = NULL, ponteiroDestino = NULL, dirAdicao = NULL, dirRemocao = NULL;
+    ListaStrings *aux;
+
+    if(origem == NULL || destino == NULL){
+        return 0;
+    }
+
+
+    //Se nao for, abre o arquivo
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
+
+    if(!ferror(arq)){
+        if(strcmp(origem->comando, "root") == 0){ //Verifica se o caminho comecar com 'root/'
+            *diretorioAtual = 0;                  //coloca o usuario no primeiro diretorio
+            dirRemocao = 0;
+            aux = origem->prox;                   //comeca a lista de comandos pelo segundo comando
+            if(aux == NULL){                      //Verifica se o caminho de destinho possui, no mínimo, mais um cluster
+                printf("Não e possivel mover a pasta root.\n"); //Se não possui, informa ao usuário que não é possível mover a pasta root
+                return 0;
+            }
+        }else{                                    //Se o caminho não começa por root/
+            dirRemocao = *diretorioAtual;
+            aux = origem;                         //Começa a busca pelo caminho indicado pelo usuário
+        }
+        if(aux != NULL){//Verifica se o caminho não é nulo
+            ponteiroOrigem = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados); //Percorre o caminho
+            if(ponteiroOrigem != -1){//Verifica se o caminho de fato existe. Se sim, começa a verificação do caminho do destino.
+                if(strcmp(destino->comando, "root") == 0){//Verifica se o caminho comecar com 'root/'
+                    *diretorioAtual = 0;                          //Se sim, coloca o usuario no primeiro diretorio
+                    dirAdicao = 0;
+                    aux = destino->prox;                         //comeca a lista de comandos pelo segundo comando
+                }else{//Se o caminho não começa com "root/"
+                    dirAdicao = *diretorioAtual;
+                    aux = destino;                               //caso contrario apenas navega pelo caminho dado
+                }
+                if(dirAdicao == 0 && aux == NULL){//Verifica se o destino é a pasta root
+                    removeFilho(dirRemocao, ponteiroOrigem, metaDados);//Se sim, remove o filho do clsuter origem
+                    adicionaFilho(ponteiroDestino, ponteiroOrigem, metaDados);//Insere o filho removido da origem na lista de filhos do cluster destino
+                    fclose(arq);
+                    return 1;
+                }else{//Se o cluster destino não é a pasta raiz
+                if(aux != NULL){
+                    ponteiroDestino = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados);//Pega o cluster onde será inserido o filho
+                    if(ponteiroDestino != -1){//Verifica se o caminho de fato existe
+                        removeFilho(dirRemocao, ponteiroOrigem, metaDados);//Se sim, remove o filho do cluster origem
+                        adicionaFilho(ponteiroDestino, ponteiroOrigem, metaDados);//Insere o filho removido do clsuter origem no cluster destino
+                        fclose(arq);
+                        return 1;
+                    }//Se o destino não for encontrado, informa ao usuário
+                    printf("Destino nao encontrado\n");
+                    fclose(arq);
+                    return 0;
+                }
+            }
+            }
+            fclose(arq);
+            return 0;
+        }
+    }
+
+}
+
 void detectaComando(char comando[], char** caminho, char *dirAtual, short int* sair, MetaDados metaDados){
 /* Detecta os possíveis comandos exigidas pelo usuário,
  * separando a operação do possível nome de diretórios e arquivos
@@ -787,12 +856,12 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
  *      Metadados para auxiliar na busca no arquivo
  */
     char clusterDisponivel, cluster = 0;
-    char *operacao = NULL, *nome = NULL, *extensao = NULL;
-    ListaStrings *listaComandos;
+    char *operacao = NULL, *nome = NULL, *extensao = NULL, *resto = NULL;
+    ListaStrings *listaComandos, *listaComandosAux;
     NodoCluster auxCluster;
 
     if(strcmp(comando, "")){   //se foi dado algum input
-        pegaOperacaoNome(comando, &operacao, &nome);
+        pegaOperacaoNome(comando, &operacao, &nome, &resto);
 
         //MKDIR
         if(strstr(operacao, "MKDIR") != NULL){
@@ -855,14 +924,20 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
                     strcpy(*caminho, "root");                //coloca "root" na string caminho
                 }
             }
-
+            apagaLSE(listaComandos);
         //EDIT
         }else if(strstr(operacao, "EDIT") != NULL){
             printf("Editar arquivo\n");
 
         //MOVE
         }else if(strcmp(operacao, "MOVE") == 0){
-            printf("Mover diretorio/arquivo\n");
+            listaComandos = NULL;
+            listaComandosAux = NULL;
+            listaComandos = pegaSequenciaComandos(nome, listaComandos);
+            listaComandosAux = pegaSequenciaComandos(resto, listaComandosAux);
+            if(move(listaComandos, listaComandosAux, dirAtual, metaDados)){
+                printf("Cluster movido com sucesso!\n");
+            }
 
         //RENAME
         }else if(strcmp(operacao, "RENAME") == 0){
@@ -878,3 +953,4 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
         }
     }
 }
+
