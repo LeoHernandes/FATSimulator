@@ -386,7 +386,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
  *      Inteiro positivo ou zero caso o caminho tenha sido encontrado
  *      -1 caso o caminho nao tenha sido encontrado
  */
-    char aux = 0;
+    char aux = 0, *extensao;
     long i = 0;
     FILE *arq;
     NodoCluster dir;
@@ -418,17 +418,24 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
                     return -1;
                 }
                 //Verifica se o nome da pasta/arquivo encontrada na lista de filhos possui o mesmo nome do caminho solicitado
-                if(strcmp(strtok(listaComandos->comando, "."), dir.nome) == 0){
-                    //Se sim, verifica se o próximo elemento da lista de comandos é 0
+                if(!strcmp(strtok(listaComandos->comando, "."), dir.nome)){
                     fclose(arq);
-                    if(listaComandos->prox == NULL){
-                        //Caso seja, seta o diretório buscado como atual e retorna o ponteiro para o cluster
-                        return aux;
-                    }else if(!strcmp(dir.extensao, "")){  //Se o próximo elemento da lista de comandos não é NULL e o elemento atual nao e' arquivo
-                        return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados); //chama a função recursivamente
-                    }else{                                              //Se o cluster tem extensao e tem mais elementos na lista
-                        printf("Tentou acessar filho de um arquivo\n"); //Avisa que tentou acessar filho de arquivo
-                        return -1;                                      //Devolve erro
+                    extensao = (strtok(NULL, "."));
+                    //Se o caminho nao possui extensao e cluster tambem nao possui
+                    if((extensao == NULL) && (!strcmp(dir.extensao, ""))){
+                        if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
+                            return aux;
+                        }else{
+                            return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados); //senao chama a função recursivamente
+                        }
+                    //Se o caminho possui extensao e o cluster tambem
+                    }else if((extensao != NULL) && (strcmp(dir.extensao, ""))){
+                        if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
+                            return aux;
+                        }else{                             //Se existe mais caminhos, encerra a funcao com erro
+                            printf("Tentativa de acesso a um filho de um arquivo\n");
+                            return -1;
+                        }
                     }
                 }
                 fseek(arq, i, SEEK_SET);
@@ -659,7 +666,7 @@ int cd(ListaStrings *listaComandos, char *diretorioAtual, MetaDados metaDados){
         if(aux != NULL){
             ponteiroCluster = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados);
             if(ponteiroCluster != -1){
-                pegaCluster(ponteiroCluster, %dir, metaDados);
+                pegaCluster(ponteiroCluster, &dir, metaDados);
                 if(!strcmp(dir.extensao, "")){  //se nao for um arquivo
                     *diretorioAtual = ponteiroCluster;
                     return 1;
