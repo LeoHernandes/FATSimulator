@@ -272,7 +272,7 @@ int adicionaFilho(char pai, char filho, MetaDados metaDados){
 }
 
 int removeFilho(char pai, char filho, MetaDados metaDados){
-/* Retira um ponteiro, da tabela fat, da lista de filhos do cluster "pai" substituindo por '0'
+/* Retira um ponteiro, da tabela fat, da lista de filhos do cluster "pai" substituindo por 'B'
  * Entrada:
  *      char, que representa o ponteiro(linha) do cluster pai
  *      char, que representa o ponteiro(linha) do cluster filho.
@@ -558,10 +558,13 @@ int dir(char pai, MetaDados metaDados){
     while(aux != '*'){
         aux = fgetc(arq);
     }
+
     aux = fgetc(arq);
-   //Se não, percorre a lista de filhos até o final e printa os nomes na tela.
+
+   //Percorre a lista de filhos até o final e printa os nomes na tela.
         while(aux != 0){
             if(aux != 'B'){ //se nao for um filho removido
+                temFilho = 1;
                 //guarda a posição do filho atual
                 i = ftell(arq);
                 //Pega o cluster que está na lista de filhos
@@ -569,7 +572,6 @@ int dir(char pai, MetaDados metaDados){
                     fclose(arq);
                     return 0;
                 }
-                temFilho = 1;
                 printf("%s", cluster.nome);
                 //se tem extensao, printa tambem
                 if(strcmp(cluster.extensao, "")) printf(".%s", cluster.extensao);
@@ -583,7 +585,6 @@ int dir(char pai, MetaDados metaDados){
     if(temFilho == 0){
         printf("<vazio>\n");
     }
-    printf("\n");
     if(ferror(arq)){
         printf("Nao foi possivel ler todos os subdiretorios\n");
         return 0;
@@ -779,14 +780,20 @@ int removeCluster(char cluster, MetaDados metaDados){
 }
 
 int move(ListaStrings *origem, ListaStrings *destino, char *diretorioAtual, MetaDados metaDados){
+/* Dado um caminho de origem e um caminho de destino, movimenta a pasta ou arquivo de local se possivel
+ * Entrada:
+ *      Lista de Strings representando o caminho de origem
+ *      Lista de Strings representando o caminho de destino
+ *      Char representando o ponteiro para o cluster atual
+ *      MetaDados para auxiliar nos calculos do fseek
+ * Retorno:
+ *      1 caso haja sucesso no movimento de diretorio/arquivo
+ *      0 caso haja uma falha
+ */
+    char dirDestino, dirRemovido;
     FILE *arq;
-    char ponteiroOrigem = NULL, ponteiroDestino = NULL, dirAdicao = NULL, dirRemocao = NULL;
     ListaStrings *aux;
-
-    if(origem == NULL || destino == NULL){
-        return 0;
-    }
-
+    NodoCluster clusterOrigem;
 
     //Se nao for, abre o arquivo
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
@@ -794,55 +801,48 @@ int move(ListaStrings *origem, ListaStrings *destino, char *diretorioAtual, Meta
         return 0;
     }
 
-    if(!ferror(arq)){
-        if(strcmp(origem->comando, "root") == 0){ //Verifica se o caminho comecar com 'root/'
-            *diretorioAtual = 0;                  //coloca o usuario no primeiro diretorio
-            dirRemocao = 0;
-            aux = origem->prox;                   //comeca a lista de comandos pelo segundo comando
-            if(aux == NULL){                      //Verifica se o caminho de destinho possui, no mínimo, mais um cluster
-                printf("Não e possivel mover a pasta root.\n"); //Se não possui, informa ao usuário que não é possível mover a pasta root
-                return 0;
-            }
-        }else{                                    //Se o caminho não começa por root/
-            dirRemocao = *diretorioAtual;
-            aux = origem;                         //Começa a busca pelo caminho indicado pelo usuário
+    if(strcmp(origem->comando, "root") == 0){ //Verifica se o caminho comecar com 'root/'
+        *diretorioAtual = 0;                  //Coloca o usuario no primeiro diretorio
+        aux = origem->prox;                   //Comeca a lista de comandos pelo segundo comando
+        if(aux == NULL){                      //Verifica se o caminho de destinho possui, no mínimo, mais um cluster
+            printf("Nao e possivel mover a pasta root.\n"); //Se não possui, informa ao usuário que não é possível mover a pasta root
+            return 0;
         }
-        if(aux != NULL){//Verifica se o caminho não é nulo
-            ponteiroOrigem = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados); //Percorre o caminho
-            if(ponteiroOrigem != -1){//Verifica se o caminho de fato existe. Se sim, começa a verificação do caminho do destino.
-                if(strcmp(destino->comando, "root") == 0){//Verifica se o caminho comecar com 'root/'
-                    *diretorioAtual = 0;                          //Se sim, coloca o usuario no primeiro diretorio
-                    dirAdicao = 0;
-                    aux = destino->prox;                         //comeca a lista de comandos pelo segundo comando
-                }else{//Se o caminho não começa com "root/"
-                    dirAdicao = *diretorioAtual;
-                    aux = destino;                               //caso contrario apenas navega pelo caminho dado
-                }
-                if(dirAdicao == 0 && aux == NULL){//Verifica se o destino é a pasta root
-                    removeFilho(dirRemocao, ponteiroOrigem, metaDados);//Se sim, remove o filho do clsuter origem
-                    adicionaFilho(ponteiroDestino, ponteiroOrigem, metaDados);//Insere o filho removido da origem na lista de filhos do cluster destino
-                    fclose(arq);
-                    return 1;
-                }else{//Se o cluster destino não é a pasta raiz
-                if(aux != NULL){
-                    ponteiroDestino = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados);//Pega o cluster onde será inserido o filho
-                    if(ponteiroDestino != -1){//Verifica se o caminho de fato existe
-                        removeFilho(dirRemocao, ponteiroOrigem, metaDados);//Se sim, remove o filho do cluster origem
-                        adicionaFilho(ponteiroDestino, ponteiroOrigem, metaDados);//Insere o filho removido do clsuter origem no cluster destino
-                        fclose(arq);
-                        return 1;
-                    }//Se o destino não for encontrado, informa ao usuário
-                    printf("Destino nao encontrado\n");
-                    fclose(arq);
-                    return 0;
-                }
-            }
-            }
+    }else{                                    //Se o caminho não começa por root/
+        aux = origem;                         //Começa a busca pelo caminho indicado pelo usuário
+    }
+
+    dirRemovido = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados); //Percorre o caminho
+    if(dirRemovido != -1){                                      //Verifica se o caminho de fato existe.
+        pegaCluster(dirRemovido, &clusterOrigem, metaDados);    //Pega o cluster a ser movido
+        if(strcmp(destino->comando, "root") == 0){              //Verifica se o caminho comeca com 'root/'
+            *diretorioAtual = 0;                                //Se sim, coloca o usuario no primeiro diretorio
+            dirDestino = 0;
+            aux = destino->prox;                                //comeca a lista de comandos pelo segundo comando
+        }else{                                                  //Se o caminho não começa com "root/"
+            aux = destino;                                      //caso contrario apenas navega pelo caminho dado
+        }
+
+        if(aux != NULL){                                        //Se o destino nao e' a pasta root
+            dirDestino = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados); //Pega o cluster onde será inserido o filho
+            *diretorioAtual = 0;                                //Coloca o usuario no diretorio root
+        }
+
+        if(dirDestino!= -1){                                             //Verifica se o caminho de fato existe
+            removeFilho(clusterOrigem.pai, dirRemovido, metaDados);      //Se sim, remove o filho do cluster origem
+            adicionaFilho(dirDestino, dirRemovido, metaDados);           //Insere o filho removido do clsuter origem no cluster destino
+            fclose(arq);
+            return 1;
+        }else{                                                           //Se o destino não for encontrado, informa ao usuário
+            printf("Destino nao encontrado\n");
             fclose(arq);
             return 0;
         }
     }
 
+    printf("Origem nao encontrada\n");
+    fclose(arq);
+    return 0;
 }
 
 void detectaComando(char comando[], char** caminho, char *dirAtual, short int* sair, MetaDados metaDados){
@@ -925,6 +925,7 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
                 }
             }
             apagaLSE(listaComandos);
+
         //EDIT
         }else if(strstr(operacao, "EDIT") != NULL){
             printf("Editar arquivo\n");
@@ -935,9 +936,15 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
             listaComandosAux = NULL;
             listaComandos = pegaSequenciaComandos(nome, listaComandos);
             listaComandosAux = pegaSequenciaComandos(resto, listaComandosAux);
-            if(move(listaComandos, listaComandosAux, dirAtual, metaDados)){
+            if(listaComandos != NULL && listaComandosAux != NULL && move(listaComandos, listaComandosAux, dirAtual, metaDados)){
                 printf("Cluster movido com sucesso!\n");
+                realloc(*caminho, sizeof(char)*5);       //realoca espaco correto pro caminho
+                strcpy(*caminho, "root");                //coloca "root" na string caminho
+            }else{
+                printf("Nao foi possivel mover o cluster\n");
             }
+            apagaLSE(listaComandos);
+            apagaLSE(listaComandosAux);
 
         //RENAME
         }else if(strcmp(operacao, "RENAME") == 0){
