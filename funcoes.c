@@ -313,8 +313,42 @@ int removeFilho(char pai, char filho, MetaDados metaDados){
 
 }
 
-int insereNodoCluster(NodoCluster nodoCluster, char ponteiroCluster){
+int insereNodoCluster(NodoCluster nodoCluster, char ponteiroCluster, MetaDados metaDados){
 /* Escreve um novo cluster dado o ponteiro pro cluster disponivel
+ * Entrada:
+ *      Estrutura NodoCluster que vai ser gravada
+ *      Char representando o ponteiro para a posicao disponivel
+ *      Metadados para auxiliar na busca no arquivo
+ * Retorno:
+ *      1 caso haja sucesso na gravacao
+ *      0 caso haja falha
+ */
+    int i;
+    char zero = 0;
+    FILE *arq;
+
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
+
+    //Posiciona o ponteiro do arquivo no cluster onde será inserido um filho
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * ponteiroCluster), SEEK_SET);
+
+    fwrite(&nodoCluster, sizeof(NodoCluster), 1, arq);
+    for(i = 0; i < (metaDados.tamCluster * 1000 - sizeof(NodoCluster)); i++)
+        fwrite(&zero, sizeof(char), 1, arq);
+
+    fclose(arq);
+    if(ferror(arq)){
+        printf("Erro na escrita dos clusters\n");
+        return 0;
+    }
+    return 1;
+}
+
+int modificaNodoCluster(NodoCluster nodoCluster, char ponteiroCluster, MetaDados metaDados){
+/* Altera um cluster existente dado o ponteiro pro cluster disponivel
  * Entrada:
  *      Estrutura NodoCluster que vai ser gravada
  *      Char representando o ponteiro para a posicao disponivel
@@ -322,14 +356,17 @@ int insereNodoCluster(NodoCluster nodoCluster, char ponteiroCluster){
  *      1 caso haja sucesso na gravacao
  *      0 caso haja falha
  */
-    NodoCluster dir;
     FILE *arq;
-    arq = fopen("ArqDisco.bin", "r+b");
 
-    fseek(arq, sizeof(MetaDados) + TAMTABELA + 1 + ((TAMCLUSTER + 1) * ponteiroCluster), SEEK_SET);
-    fwrite("\n", sizeof(char), 1, arq);
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
 
-    if(fwrite(&dir, sizeof(NodoCluster), 1, arq)){
+    //Posiciona o ponteiro do arquivo no cluster onde será inserido um filho
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * ponteiroCluster), SEEK_SET);
+
+    if(fwrite(&nodoCluster, sizeof(NodoCluster), 1, arq)){      //escreve cluster modificado
         fclose(arq);
         return 1;
     }else{
@@ -371,25 +408,27 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
     if(aux == 0){                           //Se o primeiro filho for igual a zero, a pasta pai não tem filho
         fclose(arq);                        //Fecha o arquivo e retorna 0, indicando erro.
         return -1;
-    }else{                                  //Se não, busca se há uma pasta com o nome solicitado no caminho indicado
+    }else{                                  //Se não, busca se há uma pasta/arquivo com o nome solicitado no caminho indicado
         while(aux != 0){
             if(aux != 'B'){                 //Se nao for um filho removido
-                i = ftell(arq);                 //guarda a posição atual na lista de filhos
+                i = ftell(arq);              //guarda a posição atual na lista de filhos
                 if(!pegaCluster(aux, &dir, metaDados)){    //pega o cluster indicado pelo filho
                     printf("Erro na leitura do cluster\n");
                     fclose(arq);
                     return -1;
                 }
-                //Verifica se o nome da pasta encontrada na lista de filhos possui o mesmo nome do caminho solicitado
-                if(strcmp(listaComandos->comando, dir.nome) == 0){
+                //Verifica se o nome da pasta/arquivo encontrada na lista de filhos possui o mesmo nome do caminho solicitado
+                if(strcmp(strtok(listaComandos->comando, "."), dir.nome) == 0){
                     //Se sim, verifica se o próximo elemento da lista de comandos é 0
+                    fclose(arq);
                     if(listaComandos->prox == NULL){
-                        //Caso seja, seta o diretório buscado como atual e retorna 1
-                        fclose(arq);
+                        //Caso seja, seta o diretório buscado como atual e retorna o ponteiro para o cluster
                         return aux;
-                    }else{//Se o próximo elemento da lista de comandos não é NULL, chama a função recursivamente.
-                        fclose(arq);
-                        return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados);
+                    }else if(!strcmp(dir.extensao, "")){  //Se o próximo elemento da lista de comandos não é NULL e o elemento atual nao e' arquivo
+                        return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados); //chama a função recursivamente
+                    }else{                                              //Se o cluster tem extensao e tem mais elementos na lista
+                        printf("Tentou acessar filho de um arquivo\n"); //Avisa que tentou acessar filho de arquivo
+                        return -1;                                      //Devolve erro
                     }
                 }
                 fseek(arq, i, SEEK_SET);
@@ -486,45 +525,25 @@ int mkDir(char* nome, char clusterPai, char cluster, MetaDados metaDados){
  *      1 caso seja realizado com sucesso
  *      0 caso a criação falhe
  */
-    FILE *arq;
-    int i = 0;
-    char zero = 0;
     NodoCluster novo = {"", "", 'a', '*'};
 
-    //Marca o primeiro cluster disponivel como ocupado e escreve no arquivo
-    if(!alteraTabelaFat(255, cluster, metaDados)){
-        printf("Erro ao atualizar a tabela\n");
-        return 0;
-    }
 
     //Cria o novo Cluster
     strcpy(novo.nome, nome);
     novo.pai = clusterPai;
 
-    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
-        printf("Erro na abertura do arquivo\n");
-        return 0;
-    }
-    //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretorio
-    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000)  * cluster), SEEK_SET);
-    //Zera o cluster
-    while( i < (metaDados.tamCluster * 1000)){
-        fwrite(&zero, sizeof(char), 1, arq);
-        i++;
-    }
-    //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo diretorio
-    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * cluster), SEEK_SET);
-    //Escreve o cluster no arquivo
-    fwrite(&novo, sizeof(NodoCluster), 1, arq);
-
-    fclose(arq);
-    if(ferror(arq)){
-        printf("Erro ao gravar o novo cluster\n");
+    if(!insereNodoCluster(novo, cluster, metaDados)){   //Se houve erro ao inserir o novo cluster
+        printf("Erro ao escrever o novo cluster\n");
         return 0;
     }
 
-    if(!adicionaFilho(clusterPai, cluster, metaDados)){  //se houve erro ao adicionar um filho na lista de filhos
+    if(!adicionaFilho(clusterPai, cluster, metaDados)){ //se houve erro ao adicionar um filho na lista de filhos
         printf("Erro ao atualizar o diretorio pai\n");
+        return 0;
+    }
+
+    if(!alteraTabelaFat(255, cluster, metaDados)){      //Marca o primeiro cluster disponivel como ocupado e escreve no arquivo
+        printf("Erro ao atualizar a tabela\n");
         return 0;
     }
 
@@ -622,6 +641,7 @@ int cd(ListaStrings *listaComandos, char *diretorioAtual, MetaDados metaDados){
     fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * (*diretorioAtual)), SEEK_SET);
     fread(&dir, sizeof(NodoCluster), 1, arq);
     fclose(arq);
+
     if(!ferror(arq)){
         if(strcmp(listaComandos->comando, "..") == 0){     //Verifica se o comando digitado foi o de "voltar"
             if(*diretorioAtual != 0){                      //Se o diretório atual é diferente do root, volta para a pasta "pai"
@@ -639,10 +659,19 @@ int cd(ListaStrings *listaComandos, char *diretorioAtual, MetaDados metaDados){
         if(aux != NULL){
             ponteiroCluster = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados);
             if(ponteiroCluster != -1){
-                *diretorioAtual = ponteiroCluster;
-                return 1;
+                pegaCluster(ponteiroCluster, %dir, metaDados);
+                if(!strcmp(dir.extensao, "")){  //se nao for um arquivo
+                    *diretorioAtual = ponteiroCluster;
+                    return 1;
+                }else{
+                    printf("Nao e possivel entrar num arquivo\n");
+                    return 0;
+                }
             }
             return 0;
+        }else{          //se o comando era apenas /root/, volta para o primeiro diretorio
+            *diretorioAtual = 0;
+            return 1;
         }
     }
     printf("Erro na leitura do cluster\n");
@@ -662,38 +691,25 @@ int mkFile(char* nome, char* extensao, char clusterPai, char cluster, MetaDados 
  *      1 caso seja realizado com sucesso
  *      0 caso a criação falhe
  */
-    FILE *arq;
     NodoCluster novo = {"", "", 'a', '*'};
-
-    //Marca o primeiro cluster disponivel como ocupado e escreve no arquivo
-    if(!alteraTabelaFat(255, cluster, metaDados)){
-        printf("Erro ao atualizar a tabela\n");
-        return 0;
-    }
 
     //Cria o novo Cluster
     strcpy(novo.nome, nome);
     strcpy(novo.extensao, extensao);
     novo.pai = clusterPai;
 
-    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
-        printf("Erro na abertura do arquivo\n");
+    if(!insereNodoCluster(novo, cluster, metaDados)){   //Se houve erro ao inserir o novo cluster
+        printf("Erro ao escrever o novo cluster\n");
         return 0;
     }
 
-    //Posiciona o cursor na linha do primeiro cluster disponível que será preenchido pelo novo arquivo
-    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * cluster), SEEK_SET);
-    //Escreve o cluster no arquivo
-    fwrite(&novo, sizeof(NodoCluster), 1, arq);
-
-    fclose(arq);
-    if(ferror(arq)){
-        printf("Erro ao gravar o novo cluster\n");
-        return 0;
-    }
-
-    if(!adicionaFilho(clusterPai, cluster, metaDados)){  //se houve erro ao adicionar um filho na lista de filhos
+    if(!adicionaFilho(clusterPai, cluster, metaDados)){ //Se houve erro ao adicionar um filho na lista de filhos
         printf("Erro ao atualizar o diretorio pai\n");
+        return 0;
+    }
+
+    if(!alteraTabelaFat(255, cluster, metaDados)){      //Marca o primeiro cluster disponivel como ocupado e escreve no arquivo
+        printf("Erro ao atualizar a tabela\n");
         return 0;
     }
 
@@ -831,6 +847,8 @@ int move(ListaStrings *origem, ListaStrings *destino, char *diretorioAtual, Meta
         if(dirDestino!= -1){                                             //Verifica se o caminho de fato existe
             removeFilho(clusterOrigem.pai, dirRemovido, metaDados);      //Se sim, remove o filho do cluster origem
             adicionaFilho(dirDestino, dirRemovido, metaDados);           //Insere o filho removido do clsuter origem no cluster destino
+            clusterOrigem.pai = dirDestino;                              //Modifica o pai do cluster movimentado
+            modificaNodoCluster(clusterOrigem, dirRemovido, metaDados);  //Escreve o cluster modificado na sua posicao
             fclose(arq);
             return 1;
         }else{                                                           //Se o destino não for encontrado, informa ao usuário

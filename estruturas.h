@@ -22,8 +22,8 @@ typedef struct TipoListaStrings{
 
 /* Árvore armazenando distribuição de arquivos e pastas num cluster */
 typedef struct TipoCluster{
-    char nome[TAMNOME];
-    char extensao[TAMEXTENSAO];
+    char nome[TAMNOME + 1];
+    char extensao[TAMEXTENSAO + 1];
     char pai;
     char marcador;
 }NodoCluster;
