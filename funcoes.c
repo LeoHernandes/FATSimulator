@@ -429,7 +429,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
                             return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados); //senao chama a função recursivamente
                         }
                     //Se o caminho possui extensao e o cluster tambem
-                    }else if((extensao != NULL) && (strcmp(dir.extensao, ""))){
+                    }else if((extensao != NULL) && (strcmp(dir.extensao, "") != 0)){
                         fclose(arq);
                         if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
                             return aux;
@@ -871,6 +871,44 @@ int move(ListaStrings *origem, ListaStrings *destino, char *diretorioAtual, Meta
     return 0;
 }
 
+int reName(ListaStrings *listaCaminho, char* novoNome, char* diretorioAtual, MetaDados metaDados){
+/* Renomeia um arquivo/diretorio dado seu caminho no disco se possivel
+ * Entrada:
+ *      Lista de Strings representando o caminho do arquivo/diretorio
+ *      String com o novo nome do cluster
+ *      Char representando o ponteiro para o diretorio atual
+ *      MetaDados para auxiliar na pesquisa no arquivo
+ * Retorno:
+ *      1 caso haja sucesso de troca de nome
+ *      0 caso haja alguma falha
+ */
+    int ponteiroCluster;
+    ListaStrings *aux;
+    NodoCluster cluster;
+
+    if(!strcmp(listaCaminho->comando, "root")){     //Se for comando iniciado com /root
+        *diretorioAtual = 0;                        //Coloca o usuario no diretorio inicial
+        aux = listaCaminho->prox;                   //Comeca a busca a partir do segundo elemento
+    }else{
+        aux = listaCaminho;                         //Senao, comeca a busac pelo primeiro elemento da lista
+    }
+
+    if(aux != NULL){                                                //Se existe mais comandos
+        ponteiroCluster = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados); //Encontra o cluster procurado
+        if(ponteiroCluster != -1){                                                           //Se encontrou
+            pegaCluster(ponteiroCluster, &cluster, metaDados);                               //Pega o cluster
+            strcpy(cluster.nome, strtok(novoNome, "."));                                     //Modifica o nome
+            return(modificaNodoCluster(cluster, ponteiroCluster, metaDados));                //Grava o cluster modificado
+        }else{                                                                               //Se nao encontrou
+            printf("Caminho nao encontrado\n");                                              //Avisa ao usuario
+            return 0;                                                                        //Retorna o erro
+        }
+    }else{                                                          //Se nao existe mais comandos, tentou modificar o root
+        printf("Nao e possivel renomear o root\n");                 //Avisa ao usuario
+        return 0;                                                   //Retorna o erro
+    }
+}
+
 void detectaComando(char comando[], char** caminho, char *dirAtual, short int* sair, MetaDados metaDados){
 /* Detecta os possíveis comandos exigidas pelo usuário,
  * separando a operação do possível nome de diretórios e arquivos
@@ -945,10 +983,10 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
                     removeFilho(auxCluster.pai, cluster, metaDados);
                     printf("Cluster removido\n");
                 }
-                if(!strcmp(listaComandos->comando, "root")){ //se o comando comecava com 'root', o usuario esta no root agora
-                    realloc(*caminho, sizeof(char)*5);       //realoca espaco correto pro caminho
-                    strcpy(*caminho, "root");                //coloca "root" na string caminho
-                }
+            }
+            if(*dirAtual == 0){                          //se o usuario voltou pro root agora
+                realloc(*caminho, sizeof(char)*5);       //realoca espaco correto pro caminho
+                strcpy(*caminho, "root");                //coloca "root" na string caminho
             }
             apagaLSE(listaComandos);
 
@@ -964,17 +1002,26 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
             listaComandosAux = pegaSequenciaComandos(resto, listaComandosAux);
             if(listaComandos != NULL && listaComandosAux != NULL && move(listaComandos, listaComandosAux, dirAtual, metaDados)){
                 printf("Cluster movido com sucesso!\n");
-                realloc(*caminho, sizeof(char)*5);       //realoca espaco correto pro caminho
-                strcpy(*caminho, "root");                //coloca "root" na string caminho
             }else{
                 printf("Nao foi possivel mover o cluster\n");
+            }
+            if(*dirAtual == 0){                          //se o usuario voltou para o root
+                realloc(*caminho, sizeof(char)*5);       //realoca espaco correto pro caminho
+                strcpy(*caminho, "root");                //coloca "root" na string caminho
             }
             apagaLSE(listaComandos);
             apagaLSE(listaComandosAux);
 
         //RENAME
         }else if(strcmp(operacao, "RENAME") == 0){
-            printf("Renomear arquivo/diretorio\n");
+            listaComandos = NULL;
+            listaComandos = pegaSequenciaComandos(nome, listaComandos);
+            if((listaComandos != NULL) && (resto != NULL) && reName(listaComandos, resto, dirAtual, metaDados)){
+                printf("Renomeado com sucesso\n");
+            }else{
+                printf("Nao foi possivel renomear\n");
+            }
+            apagaLSE(listaComandos);
 
         //EXIT
         }else if(strcmp(operacao, "EXIT") == 0){
