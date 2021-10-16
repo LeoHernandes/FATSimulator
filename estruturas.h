@@ -7,7 +7,7 @@
 #define INITABELA   8
 #define INITCLUSTER 264
 #define REALLOCSIZE 16
-#define TAMNOME     64
+#define TAMNOME     32
 #define TAMEXTENSAO 3
 
 /*------------*/

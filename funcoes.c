@@ -419,10 +419,10 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
                 }
                 //Verifica se o nome da pasta/arquivo encontrada na lista de filhos possui o mesmo nome do caminho solicitado
                 if(!strcmp(strtok(listaComandos->comando, "."), dir.nome)){
-                    fclose(arq);
                     extensao = (strtok(NULL, "."));
                     //Se o caminho nao possui extensao e cluster tambem nao possui
                     if((extensao == NULL) && (!strcmp(dir.extensao, ""))){
+                        fclose(arq);
                         if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
                             return aux;
                         }else{
@@ -430,6 +430,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
                         }
                     //Se o caminho possui extensao e o cluster tambem
                     }else if((extensao != NULL) && (strcmp(dir.extensao, ""))){
+                        fclose(arq);
                         if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
                             return aux;
                         }else{                             //Se existe mais caminhos, encerra a funcao com erro
