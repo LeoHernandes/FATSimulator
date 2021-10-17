@@ -386,7 +386,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
  *      Inteiro positivo ou zero caso o caminho tenha sido encontrado
  *      -1 caso o caminho nao tenha sido encontrado
  */
-    int aux = 0, *extensao, *comandoAux = NULL;
+    int aux = 0, *comandoAux = NULL;
     long i = 0;
     FILE *arq;
     NodoCluster dir;
@@ -419,7 +419,6 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
                 }
                 //Verifica se o nome da pasta/arquivo encontrada na lista de filhos possui o mesmo nome do caminho solicitado
                 if(!strcmp(strtok(listaComandos->comando, "."), dir.nome)){
-                    //extensao = strtok(NULL, ".");
                     //Se o caminho nao possui extensao e cluster tambem nao possui
                     if(!strcmp(dir.extensao, "")){
                         fclose(arq);
