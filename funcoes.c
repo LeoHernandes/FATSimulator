@@ -173,7 +173,7 @@ int primeiraPosicaoDisponivel(char *clusterDisponivel, MetaDados metaDados){
  *      1 caso tenha achado posicao diponivel
  *      0 caso nao tenha posicao disponivel ou houve problema com o arquivo
  */
-    char aux = 255;
+    int aux = 255;
     short int iterador = -1;
     FILE *arq;
 
@@ -184,7 +184,7 @@ int primeiraPosicaoDisponivel(char *clusterDisponivel, MetaDados metaDados){
 
     fseek(arq, metaDados.initIndice, SEEK_SET);  //vai ate a tabela FAT
 
-    while(iterador < metaDados.tamIndice && aux != 0 && aux != 'B'){
+    while(iterador < metaDados.tamIndice && aux != 0 && aux != 254){
         aux = fgetc(arq);
         iterador++;                                  //itera ate achar posicao disponivel ou chegar no final da tabela
     }
@@ -238,7 +238,7 @@ int adicionaFilho(char pai, char filho, MetaDados metaDados){
  *      1, caso haja sucesso na escrita da nova lista de filhos
  *      0, caso falhe na escrita
  */
-    char aux = 0;
+    int aux = 0;
     FILE *arq;
 
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
@@ -255,7 +255,7 @@ int adicionaFilho(char pai, char filho, MetaDados metaDados){
     }
 
     //Percorre, a partir do marcador '*', até encontrar o primeira posição livre para inserir o ponteiro do filho
-    while(aux != 0 && aux != 'B'){
+    while(aux != 0 && aux != 254){
         aux = fgetc(arq);
     }
 
@@ -281,7 +281,7 @@ int removeFilho(char pai, char filho, MetaDados metaDados){
  *      1, caso haja sucesso na escrita da nova lista de filhos
  *      0, caso falhe na escrita
  */
-    char aux = 0, B = 'B';
+    char aux = 0, B = 254;
     FILE *arq;
 
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
@@ -386,7 +386,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
  *      Inteiro positivo ou zero caso o caminho tenha sido encontrado
  *      -1 caso o caminho nao tenha sido encontrado
  */
-    char aux = 0, *extensao;
+    int aux = 0, *extensao, *comandoAux = NULL;
     long i = 0;
     FILE *arq;
     NodoCluster dir;
@@ -410,7 +410,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
         return -1;
     }else{                                  //Se não, busca se há uma pasta/arquivo com o nome solicitado no caminho indicado
         while(aux != 0){
-            if(aux != 'B'){                 //Se nao for um filho removido
+            if(aux != 254){                 //Se nao for um filho removido
                 i = ftell(arq);              //guarda a posição atual na lista de filhos
                 if(!pegaCluster(aux, &dir, metaDados)){    //pega o cluster indicado pelo filho
                     printf("Erro na leitura do cluster\n");
@@ -419,9 +419,9 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
                 }
                 //Verifica se o nome da pasta/arquivo encontrada na lista de filhos possui o mesmo nome do caminho solicitado
                 if(!strcmp(strtok(listaComandos->comando, "."), dir.nome)){
-                    extensao = (strtok(NULL, "."));
+                    //extensao = strtok(NULL, ".");
                     //Se o caminho nao possui extensao e cluster tambem nao possui
-                    if((extensao == NULL) && (!strcmp(dir.extensao, ""))){
+                    if(!strcmp(dir.extensao, "")){
                         fclose(arq);
                         if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
                             return aux;
@@ -429,7 +429,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
                             return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados); //senao chama a função recursivamente
                         }
                     //Se o caminho possui extensao e o cluster tambem
-                    }else if((extensao != NULL) && (strcmp(dir.extensao, "") != 0)){
+                    }else if(strcmp(dir.extensao, "") != 0){
                         fclose(arq);
                         if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
                             return aux;
@@ -534,11 +534,21 @@ int mkDir(char* nome, char clusterPai, char cluster, MetaDados metaDados){
  *      0 caso a criação falhe
  */
     NodoCluster novo = {"", "", 'a', '*'};
+    ListaStrings *lsNome;
+    lsNome = NULL;
 
+    lsNome = inserirLSEStrings(lsNome, nome);
 
+    if(encontraCaminho(lsNome, clusterPai, clusterPai, metaDados) != -1){
+        apagaLSE(lsNome);
+        printf("Ja existe um diretorio com esse nome.\n");
+        return 0;
+    }
+     apagaLSE(lsNome);
     //Cria o novo Cluster
     strcpy(novo.nome, nome);
     novo.pai = clusterPai;
+
 
     if(!insereNodoCluster(novo, cluster, metaDados)){   //Se houve erro ao inserir o novo cluster
         printf("Erro ao escrever o novo cluster\n");
@@ -569,7 +579,7 @@ int dir(char pai, MetaDados metaDados){
  */
     long i = 0;
     int temFilho = 0;
-    char aux = 0;
+    int aux = 0;
     FILE *arq;
     NodoCluster cluster;
 
@@ -590,7 +600,7 @@ int dir(char pai, MetaDados metaDados){
 
    //Percorre a lista de filhos até o final e printa os nomes na tela.
         while(aux != 0){
-            if(aux != 'B'){ //se nao for um filho removido
+            if(aux != 254){ //se nao for um filho removido
                 temFilho = 1;
                 //guarda a posição do filho atual
                 i = ftell(arq);
@@ -631,57 +641,45 @@ int cd(ListaStrings *listaComandos, char *diretorioAtual, MetaDados metaDados){
  */
     int ponteiroCluster;
     NodoCluster dir;
-    FILE *arq;
     ListaStrings *aux;
 
     //Verifica se a lista de comando é vazia
     if(listaComandos == NULL){
+        return 0;
+    }
+    pegaCluster(*diretorioAtual, &dir, metaDados);
+
+    if(strcmp(listaComandos->comando, "..") == 0){     //Verifica se o comando digitado foi o de "voltar"
+        if(*diretorioAtual != 0){                      //Se o diretório atual é diferente do root, volta para a pasta "pai"
+            *diretorioAtual = dir.pai;
+            return 1;
+        }                                              //Senao, fecha o arquivo e retorna 1, indicando erro.
+        return 0;
+    }else if(strcmp(listaComandos->comando, "root") == 0){ //se o comando comecar com 'root'
+        *diretorioAtual = 0;                               //coloca o usuario no primeiro diretorio
+        aux = listaComandos->prox;                         //comeca a lista de comandos pelo segundo comando
+    }else{
+        aux = listaComandos;                               //caso contrario apenas navega pelo caminho dado
+    }
+    //Se nao for o comando '..', percorre recursivamente pelas pastas
+    if(aux != NULL){
+        ponteiroCluster = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados);
+        if(ponteiroCluster != -1){
+            pegaCluster(ponteiroCluster, &dir, metaDados);
+            if(!strcmp(dir.extensao, "")){  //se nao for um arquivo
+                *diretorioAtual = ponteiroCluster;
+                return 1;
+            }else{
+                printf("Nao e possivel entrar num arquivo\n");
+                return 0;
+            }
+        }
+        return 0;
+    }else{          //se o comando era apenas /root/, volta para o primeiro diretorio
+        *diretorioAtual = 0;
         return 1;
     }
 
-    //Se nao for, abre o arquivo
-    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
-        printf("Erro na abertura do arquivo\n");
-        return 0;
-    }
-
-    //Pega as informacoes do diretorio atual
-    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * (*diretorioAtual)), SEEK_SET);
-    fread(&dir, sizeof(NodoCluster), 1, arq);
-    fclose(arq);
-
-    if(!ferror(arq)){
-        if(strcmp(listaComandos->comando, "..") == 0){     //Verifica se o comando digitado foi o de "voltar"
-            if(*diretorioAtual != 0){                      //Se o diretório atual é diferente do root, volta para a pasta "pai"
-                *diretorioAtual = dir.pai;
-                return 1;
-            }                                              //Senao, fecha o arquivo e retorna 1, indicando erro.
-            return 0;
-        }else if(strcmp(listaComandos->comando, "root") == 0){ //se o comando comecar com 'root'
-            *diretorioAtual = 0;                               //coloca o usuario no primeiro diretorio
-            aux = listaComandos->prox;                         //comeca a lista de comandos pelo segundo comando
-        }else{
-            aux = listaComandos;                               //caso contrario apenas navega pelo caminho dado
-        }
-        //Se nao for o comando '..', percorre recursivamente pelas pastas
-        if(aux != NULL){
-            ponteiroCluster = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados);
-            if(ponteiroCluster != -1){
-                pegaCluster(ponteiroCluster, &dir, metaDados);
-                if(!strcmp(dir.extensao, "")){  //se nao for um arquivo
-                    *diretorioAtual = ponteiroCluster;
-                    return 1;
-                }else{
-                    printf("Nao e possivel entrar num arquivo\n");
-                    return 0;
-                }
-            }
-            return 0;
-        }else{          //se o comando era apenas /root/, volta para o primeiro diretorio
-            *diretorioAtual = 0;
-            return 1;
-        }
-    }
     printf("Erro na leitura do cluster\n");
     return 0;
 }
@@ -700,7 +698,17 @@ int mkFile(char* nome, char* extensao, char clusterPai, char cluster, MetaDados 
  *      0 caso a criação falhe
  */
     NodoCluster novo = {"", "", 'a', '*'};
+    ListaStrings *lsNome;
+    lsNome = NULL;
 
+    lsNome = inserirLSEStrings(lsNome, nome);
+
+    if(encontraCaminho(lsNome, clusterPai, clusterPai, metaDados) != -1){
+        apagaLSE(lsNome);
+        printf("Ja existe um arquivo com esse nome.\n");
+        return 0;
+    }
+     apagaLSE(lsNome);
     //Cria o novo Cluster
     strcpy(novo.nome, nome);
     strcpy(novo.extensao, extensao);
@@ -770,10 +778,10 @@ int removeCluster(char cluster, MetaDados metaDados){
  *      1 caso a função seja realizada com sucesso
  *      0 caso o caminho tenha dado algum erro durante a execução da função
  */
-    char aux = 0;
+    int aux = 0;
     FILE *arq;
 
-    alteraTabelaFat('B', cluster, metaDados); //Marca o cluster, na tabela FAT, como 'disponível'
+    alteraTabelaFat(254, cluster, metaDados); //Marca o cluster, na tabela FAT, como 'disponível'
 
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
         printf("Erro na abertura do arquivo\n");
@@ -793,7 +801,7 @@ int removeCluster(char cluster, MetaDados metaDados){
         return 1;
     }else{                                          //Se o cluster tem filhos
         while(aux != 0){
-            if(aux != 'B')                          //Se nao for um filho removido
+            if(aux != 254)                          //Se nao for um filho removido
                 removeCluster(aux, metaDados);      //Chama a função recursivamente para a sub-árvore do filho
             aux = fgetc(arq);                       //pega o proximo filho
         }
@@ -817,7 +825,7 @@ int move(ListaStrings *origem, ListaStrings *destino, char *diretorioAtual, Meta
     char dirDestino, dirRemovido;
     FILE *arq;
     ListaStrings *aux;
-    NodoCluster clusterOrigem;
+    NodoCluster clusterOrigem, clusterDestino;
 
     //Se nao for, abre o arquivo
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
@@ -851,14 +859,23 @@ int move(ListaStrings *origem, ListaStrings *destino, char *diretorioAtual, Meta
             dirDestino = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados); //Pega o cluster onde será inserido o filho
             *diretorioAtual = 0;                                //Coloca o usuario no diretorio root
         }
-
+        pegaCluster(dirDestino, &clusterDestino, metaDados);
         if(dirDestino!= -1){                                             //Verifica se o caminho de fato existe
-            removeFilho(clusterOrigem.pai, dirRemovido, metaDados);      //Se sim, remove o filho do cluster origem
-            adicionaFilho(dirDestino, dirRemovido, metaDados);           //Insere o filho removido do clsuter origem no cluster destino
-            clusterOrigem.pai = dirDestino;                              //Modifica o pai do cluster movimentado
-            modificaNodoCluster(clusterOrigem, dirRemovido, metaDados);  //Escreve o cluster modificado na sua posicao
-            fclose(arq);
-            return 1;
+            if(dirDestino == dirRemovido){
+                printf("Nao e possivel mover uma pasta para ela mesmo.\n");
+                return 0;
+            }
+            if(!strcmp(clusterDestino.extensao, "")){
+                removeFilho(clusterOrigem.pai, dirRemovido, metaDados);      //Se sim, remove o filho do cluster origem
+                adicionaFilho(dirDestino, dirRemovido, metaDados);           //Insere o filho removido do clsuter origem no cluster destino
+                clusterOrigem.pai = dirDestino;                              //Modifica o pai do cluster movimentado
+                modificaNodoCluster(clusterOrigem, dirRemovido, metaDados);  //Escreve o cluster modificado na sua posicao
+                fclose(arq);
+                return 1;
+            }else{//Se o destino for um arquivo de texto, informa ao usuário que não é possível realizar essa operação.
+                printf("Nao e possivel mover algo para um arquivo de texto.\n");
+                return 0;
+            }
         }else{                                                           //Se o destino não for encontrado, informa ao usuário
             printf("Destino nao encontrado\n");
             fclose(arq);

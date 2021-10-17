@@ -3,9 +3,9 @@
 /*------------*/
 
 #define TAMCLUSTER  32
-#define TAMTABELA   256
+#define TAMTABELA   254
 #define INITABELA   8
-#define INITCLUSTER 264
+#define INITCLUSTER 262
 #define REALLOCSIZE 16
 #define TAMNOME     32
 #define TAMEXTENSAO 3
