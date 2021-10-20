@@ -925,6 +925,22 @@ int reName(ListaStrings *listaCaminho, char* novoNome, char* diretorioAtual, Met
     }
 }
 
+int divideTexto(char* texto, MetaDados metaDados){
+    int i = 0, m = 0;
+
+    int clustersNecessarios = 1;
+    while(texto[m] != '\0'){
+        if(i == (metaDados.tamCluster*1000)-sizeof(NodoCluster)){
+            clustersNecessarios++;
+            i = 0;
+        }else
+            i++;
+    m++;
+    }
+    return clustersNecessarios;
+
+}
+
 void detectaComando(char comando[], char** caminho, char *dirAtual, short int* sair, MetaDados metaDados){
 /* Detecta os possíveis comandos exigidas pelo usuário,
  * separando a operação do possível nome de diretórios e arquivos
@@ -936,9 +952,10 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
  *      Metadados para auxiliar na busca no arquivo
  */
     char clusterDisponivel, cluster = 0;
-    char *operacao = NULL, *nome = NULL, *extensao = NULL, *resto = NULL;
+    char *operacao = NULL, *nome = NULL, *extensao = NULL, *resto = NULL, *input;
     ListaStrings *listaComandos, *listaComandosAux;
     NodoCluster auxCluster;
+
 
     if(strcmp(comando, "")){   //se foi dado algum input
         pegaOperacaoNome(comando, &operacao, &nome, &resto);
@@ -1008,7 +1025,6 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
 
         //EDIT
         }else if(strstr(operacao, "EDIT") != NULL){
-            printf("Editar arquivo\n");
 
         //MOVE
         }else if(strcmp(operacao, "MOVE") == 0){
