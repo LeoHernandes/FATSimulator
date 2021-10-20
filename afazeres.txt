@@ -3,3 +3,11 @@ Função Rename
 Função Move
 Função Edit
 Corrigir função Remove
+
+Bugs e datalhes que eu percebi:
+Ao entrarmos em uma pasta, se digitarmos "CD root" ele faz essa pasta virar a root
+Quebras de linhas inconstantes
+Adicionar opção de letras minusculas
+Arquivos criados tem nome bugado no simulador
+Aquivos criados no simulador não aparecem no computador
+Programa crasha se digitarmos apenas "CD"
