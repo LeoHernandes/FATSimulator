@@ -961,7 +961,7 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
         pegaOperacaoNome(comando, &operacao, &nome, &resto);
 
         //MKDIR
-        if(strstr(operacao, "MKDIR") != NULL){
+        if((strstr(operacao, "MKDIR") != NULL)||(strstr(operacao, "mkdir") != NULL)){
             if(primeiraPosicaoDisponivel(&clusterDisponivel, metaDados)){   //se encontrou cluster disponivel
                 if((nome != NULL) && (mkDir(nome, *dirAtual, clusterDisponivel, metaDados))){
                     printf("Diretorio Criado!\n");
@@ -971,13 +971,13 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
             }
 
         //DIR
-        }else if(strstr(operacao, "DIR") != NULL){
+        }else if((strstr(operacao, "DIR")!= NULL)||(strstr(operacao, "dir")!= NULL)){
             if(!dir(*dirAtual, metaDados)){
                 printf("Nao foi possivel listar todos os diretorios e arquvios\n");
             }
 
         //CD
-        }else if(strcmp(operacao, "CD") == 0){
+        }else if((strcmp(operacao, "CD") == 0)||(strcmp(operacao, "cd") == 0)){
             listaComandos = NULL;
             listaComandos = pegaSequenciaComandos(nome, listaComandos);
 
@@ -993,7 +993,7 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
             apagaLSE(listaComandos);
 
         //MKFILE
-        }else if(strcmp(operacao, "MKFILE") == 0){
+        }else if((strcmp(operacao, "MKFILE") == 0)||(strcmp(operacao, "mkfile") == 0)){
             if(primeiraPosicaoDisponivel(&clusterDisponivel, metaDados)){
                 nome = strtok(nome, ".");
                 extensao = strtok(NULL, ".");
@@ -1005,7 +1005,7 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
             }
 
         //RM
-        }else if(strcmp(operacao, "RM") == 0){
+        }else if((strcmp(operacao, "RM") == 0)||(strcmp(operacao, "rm") == 0)){
             listaComandos = NULL;
             listaComandos = pegaSequenciaComandos(nome, listaComandos);
             if(!rm(listaComandos, dirAtual, &cluster, metaDados)){
@@ -1024,10 +1024,11 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
             apagaLSE(listaComandos);
 
         //EDIT
-        }else if(strstr(operacao, "EDIT") != NULL){
+        }else if((strstr(operacao, "EDIT") != NULL)||(strstr(operacao, "edit") != NULL)){
+            printf("Editar arquivo\n");
 
         //MOVE
-        }else if(strcmp(operacao, "MOVE") == 0){
+        }else if((strcmp(operacao, "MOVE") == 0)||(strcmp(operacao, "move") == 0)){
             listaComandos = NULL;
             listaComandosAux = NULL;
             listaComandos = pegaSequenciaComandos(nome, listaComandos);
@@ -1045,7 +1046,7 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
             apagaLSE(listaComandosAux);
 
         //RENAME
-        }else if(strcmp(operacao, "RENAME") == 0){
+        }else if((strcmp(operacao, "RENAME") == 0)||(strcmp(operacao, "rename") == 0)){
             listaComandos = NULL;
             listaComandos = pegaSequenciaComandos(nome, listaComandos);
             if((listaComandos != NULL) && (resto != NULL) && reName(listaComandos, resto, dirAtual, metaDados)){
@@ -1056,7 +1057,7 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
             apagaLSE(listaComandos);
 
         //EXIT
-        }else if(strcmp(operacao, "EXIT") == 0){
+        }else if((strcmp(operacao, "EXIT") == 0)||(strcmp(operacao, "exit") == 0)){
             *sair = 1;
 
         //UNDEFINED
