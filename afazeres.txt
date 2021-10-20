@@ -1,11 +1,10 @@
-O que falta:
-Função Rename
-Função Move
-Função Edit
-Corrigir função Remove
+﻿O que falta:
+*Resolver o problema de ser possível criar um diretório com .txt
+*Resolver o problema de ser possível criar um arquivo de texto com uma extensão qualquer. Ex: text.asd
+*Corrigir a função RM. Com a função EDIT, arquivos que ocupam mais de um cluster bugam quando é solicitado para remove-los,
+fazendo com que o programa crashe.
 
 Bugs e datalhes que eu percebi:
-Ao entrarmos em uma pasta, se digitarmos "CD root" ele faz essa pasta virar a root
-Quebras de linhas inconstantes
-Arquivos criados tem nome bugado no simulador
-Aquivos criados no simulador não aparecem no computador
+*Quebras de linhas inconstantes(verificar)
+*Arquivos criados tem nome bugado no simulador(pode ser ocasionado pela falta de codificação do arquivo. Podemos tornar
+possível nomes no padrão UTF-8).
