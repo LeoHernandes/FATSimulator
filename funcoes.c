@@ -1011,8 +1011,8 @@ int edit(char* texto, char clusterArquivo, MetaDados metaDados){
     fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * clusterArquivo + sizeof(NodoCluster) + 1), SEEK_SET);
     if(qtdClusters == 1){//Se for necessário somente um cluster
         int filho = temFilhos(clusterArquivo, metaDados);
+        ponteiroInicioArq = clusterArquivo;
         if(filho != 0){
-            ponteiroInicioArq = clusterArquivo;
             alteraTabelaFat(255, clusterArquivo, metaDados);
             while(filho != 0){
                 alteraTabelaFat(254, filho, metaDados);
@@ -1159,7 +1159,7 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
             apagaLSE(listaComandos);
 
         //EDIT
-        }else if(strstr(operacao, "EDIT") != NULL){
+        }else if((strstr(operacao, "EDIT") != NULL)||(strstr(operacao, "edit") != NULL)){
             int clusterIncialArquivo;
             listaComandos = NULL;
             listaComandos = NULL;
@@ -1171,9 +1171,6 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
                         printf("Arquivo editado com sucesso!\n");
                     }else{
                         printf("Ocorreu um erro ao editar o arquivo\n");
-        }else if((strstr(operacao, "EDIT") != NULL)||(strstr(operacao, "edit") != NULL)){
-            printf("Editar arquivo\n");
-
                     }
                 }else{
                     printf("O arquivo nao foi encontrado. Veja se o caminho esta correto.\n");
