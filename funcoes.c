@@ -1262,6 +1262,10 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
         }else if((strcmp(operacao, "EXIT") == 0)||(strcmp(operacao, "exit") == 0)){
             *sair = 1;
 
+        //CLS
+        }else if((strcmp(operacao, "cls") == 0)||(strcmp(operacao, "CLS") == 0)){
+            system("cls");
+
         //UNDEFINED
         }else{
             printf("Comando nao reconhecido.\n");
