@@ -516,65 +516,6 @@ void reconstroiCaminho(char **caminho, ListaStrings *listaComandos){
     }
 }
 
-int temFilhos(char cluster, MetaDados metaDados){
-/*  Função que informa se um cluster tem filho
-*   Entrada:
-*       char que representa um ponteiro de um cluster na tabela de indices
-*       metadados metadados do disco
-*   Retorna:
-*       0 se o cluster não possui filho
-*       int ponteiro do primeiro filho
-*/
-    int aux = 0;
-    FILE *arq;
-
-    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
-        printf("Erro na abertura do arquivo\n");
-        return 0;
-    }
-
-    //Posiciona o ponteiro do arquivo no cluster onde será inserido um filho
-    fseek(arq, metaDados.initCluster +((metaDados.tamCluster * 1000) * cluster), SEEK_SET);
-
-    //Percorre todos os caracteres do cluster até encontrar o marcador '*'
-    while(aux != '*'){
-        aux = fgetc(arq);
-    }
-    //Pega a primeira posição da lista de filhos
-    aux = fgetc(arq);
-    if(aux == 0 || aux == 254){//Se for 0, não possui filho
-        fclose(arq);
-        return 0;
-    }else{//Caso contrário, possui filho e retorna o ponteiro dele.
-        fclose(arq);
-        return aux;
-    }
-
-}
-
-int divideTexto(char* texto, MetaDados metaDados){
-/* Função que informa a quantidade de cluster necessários para armazenar um determinado texto
-   Entrada:
-        char* varíavel que armazena o texto que o usuário deseja armazenar
-        Metadados metadados utilizados na função.
-   Retorna:
-        int valor que representa a quantidade de cluster necessários
-*/
-    int i = 0, m = 0;
-
-    int clustersNecessarios = 1;
-    while(texto[m] != '\0'){
-        if(i == (metaDados.tamCluster*1000)-sizeof(NodoCluster)){
-            clustersNecessarios++;
-            i = 0;
-        }else
-            i++;
-    m++;
-    }
-    return clustersNecessarios;
-
-}
-
 int removeArquivo(char clusterArquivo, MetaDados metaDados){
 /* Dado um cluster que e' o local inicial de um arquivo .txt, marca como removido na tabela FAT
  * todos os possiveis endereços que sao ocupados pelo arquivo
@@ -1030,85 +971,53 @@ int edit(char* texto, char clusterArquivo, MetaDados metaDados){
  *      0 caso ocorra um erro ao realizar a operação
  */
     FILE *arq;
-    int qtdClusters = 0, i = 0, j = 0, m = 0, zero = 0, ponteiroInicioArq = 0, filho;
-    char proximoCluster = 0;
+    int indexTexto = 0, indexCluster = 0;
+    char proximoCluster, atualCluster;
 
+    if(!removeArquivo(clusterArquivo, metaDados)){        //Remove o arquivo anterior para substituir pelo arquivo editado
+        printf("Erro na remocao do arquivo anterior\n");
+        return 0;
+    }
 
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
         printf("Erro na abertura do arquivo\n");
         return 0;
     }
 
-    //calcula a quantidade de clusters necessários para armazenar o arquivo
-    qtdClusters = divideTexto(texto, metaDados);
+    atualCluster = clusterArquivo;
+    //Loop para iterar sobre cada cluster necessario para armazenar o arquivo
+    do{
+        //Posiciona o ponteiro do arquivo no inicio do cluster principal do arquivo
+        fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * atualCluster + sizeof(NodoCluster)), SEEK_SET);
+        //Escreve o texto no cluster ate chegar no final do texto ou ocupar o cluster todo
+        while((texto[indexTexto] != '\0') && (indexCluster < (metaDados.tamCluster * 1000) - sizeof(NodoCluster))){
+            fwrite(&texto[indexTexto], sizeof(char), 1, arq);
+            indexTexto++;
+            indexCluster++;
+        }
 
-    //Posiciona o ponteiro do arquivo no inicio do cluster principal do arquivo
-    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * clusterArquivo + sizeof(NodoCluster)), SEEK_SET);
-
-    if(qtdClusters == 1){//Se for necessário somente um cluster
-        filho = temFilhos(clusterArquivo, metaDados);
-        ponteiroInicioArq = clusterArquivo;
-        if(filho != 0){
-            alteraTabelaFat(255, clusterArquivo, metaDados);
-            while(filho != 0){
-                alteraTabelaFat(254, filho, metaDados);
-                removeFilho(clusterArquivo, filho , metaDados);
-                clusterArquivo = filho;
-                filho = temFilhos(clusterArquivo, metaDados);
+        if(texto[indexTexto] != '\0'){                                      //Se nao chegou no fim do texto
+            if(primeiraPosicaoDisponivel(&proximoCluster, metaDados)){      //Se conseguiu encontrar um proximo cluster diponivel
+                indexCluster = 0;                                           //Reinicia o iterador
+                alteraTabelaFat(proximoCluster, atualCluster, metaDados);   //Atualiza a tabela para apontar para o proximo cluster
+                atualCluster = proximoCluster;                              //Muda o cluster atual para o proximo a ser preenchido
+            }else{                                                          //Se nao ha cluster disponivel
+                printf("Nao foi possivel encontrar cluster disponivel\n");
+                return 0;                                                   //Avisa ao ususario retornando erro
             }
+        }else{                                                              //Se chegou ao final do texto
+            proximoCluster = 0;                                             //Sinaliza para sair do loop
         }
-        fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * ponteiroInicioArq + sizeof(NodoCluster)), SEEK_SET);
-        //Apaga o arquivo anteior
-        for(i = 0; i < ((metaDados.tamCluster*1000) - sizeof(NodoCluster)); i++){
-            fwrite(&zero, sizeof(char), 1, arq);
-        }
-        fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * ponteiroInicioArq + sizeof(NodoCluster)), SEEK_SET);
-        //Escreve o texto até encontrar o final dele.
-        for(i = 0; texto[i] != '\0'; i++){
-            fwrite(&texto[i], sizeof(char), 1, arq);
-        }
-        //fecha o arquivo e retorna 1, indicando sucesso.
-        fclose(arq);
-        return 1;
-    }else{//Se for necessário mais de um cluster para armazenar o texto
-        for(m = 0; m < qtdClusters; m++){//Laço que controla a quantidade de clusters escritos
-            for(i; i < ((metaDados.tamCluster*1000) - sizeof(NodoCluster)); i++){//Percorre o texto até chegar no máximo que um cluster consegue armazenar
-                //Escreve o arquivo
-                fwrite(&texto[j], sizeof(char), 1, arq);
-                j++;
-                //Se chegar no final do texto
-                if( texto[j] == '\0'){
-                    //Fecha o arquivo e retorna 1, indicando sucesso.
-                    fclose(arq);
-                    return 1;
-                }
-            }//Quando preencheu todo um cluster e não chegou ao final do texto.
-            //Verifica se a edição está sendo feita em cima de um arquivo que já está armazenado em mais de um cluster
-            if(temFilhos(clusterArquivo, metaDados) != 0){
-                //Apagar o cluster
-                //Se sim, seta o clusterArquivo como o filho do cluster que acabou de ser preenchido
-                clusterArquivo = temFilhos(clusterArquivo, metaDados);
 
-            }else{ //Se não possui filho
-                //Pega a primeira posição disponível da tabela de indices
-                primeiraPosicaoDisponivel(&proximoCluster, metaDados);
-                //Cria um cluster vazio para continuar armazenando o texto
-                mkDir("", clusterArquivo, proximoCluster, metaDados);
-                //Adiciona o cluster criado na lista de filhos do cluster que foi preenchido
-                adicionaFilho(clusterArquivo, proximoCluster, metaDados);
-                //Indica o proximo filho do arquivo na tabela fat
-                alteraTabelaFat(proximoCluster, clusterArquivo, metaDados);
-                //Marca a posição do novo cluster criado como ocupado
-                alteraTabelaFat(255, proximoCluster, metaDados);
-                //Seta o clusterArquivo como o ponteiro do novo cluster criado.
-                clusterArquivo = proximoCluster;
-            }
-            //Seta o i como 0 para continuar percorrendo o texto
-            i = 0;
-            //Coloca o ponteiro do arquivo no novo cluster que será preenchido
-            fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * clusterArquivo + sizeof(NodoCluster)), SEEK_SET);
-        }
+    }while(proximoCluster != 0);
+    alteraTabelaFat(255, atualCluster, metaDados);          //Marca o cluter atual como final na tabela FAT
+
+    fclose(arq);
+    if(ferror(arq)){
+        printf("Erro na atualizacao dos clusters\n");
+        return 0;
     }
+    return 1;
 
 }
 
