@@ -1,8 +1,9 @@
 ﻿O que falta:
-*Resolver o problema de ser possível criar um diretório com .txt
-*Resolver o problema de ser possível criar um arquivo de texto com uma extensão qualquer. Ex: text.asd
+*Resolver o problema de não ser possível criar um arquivo e um diretório com o mesmo nome.
 *Corrigir a função RM. Com a função EDIT, arquivos que ocupam mais de um cluster bugam quando é solicitado para remove-los,
 fazendo com que o programa crashe.
+
+*Organizar as funções principais e auxiliares.
 
 Bugs e datalhes que eu percebi:
 *Quebras de linhas inconstantes(verificar)
