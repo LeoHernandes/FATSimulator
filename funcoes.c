@@ -633,6 +633,15 @@ int dir(char pai, MetaDados metaDados){
 
     aux = fgetc(arq);
 
+    int auxcmp;
+    auxcmp = pegaCluster(aux, &cluster, metaDados);
+    auxcmp = strcmp("root", cluster.nome);
+    if (auxcmp == 0)
+    {
+        printf("..\n");
+    }
+
+
    //Percorre a lista de filhos até o final e printa os nomes na tela.
         while(aux != 0){
             if(aux != 254){ //se nao for um filho removido
@@ -1170,6 +1179,10 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
         //EXIT
         }else if((strcmp(operacao, "EXIT") == 0)||(strcmp(operacao, "exit") == 0)){
             *sair = 1;
+
+        //CLS
+        }else if((strcmp(operacao, "cls") == 0)||(strcmp(operacao, "CLS") == 0)){
+            system("cls");
 
         //UNDEFINED
         }else{
