@@ -972,9 +972,10 @@ int edit(char* texto, char clusterArquivo, MetaDados metaDados){
  *      1 caso a operação seja realizada com sucesso
  *      0 caso ocorra um erro ao realizar a operação
  */
+    int indexTexto = 0, indexCluster = sizeof(NodoCluster);
+    char proximoCluster, atualCluster, zero = 0;
     FILE *arq;
-    int indexTexto = 0, indexCluster = 0;
-    char proximoCluster, atualCluster;
+    NodoCluster dir;
 
     if(!removeArquivo(clusterArquivo, metaDados)){        //Remove o arquivo anterior para substituir pelo arquivo editado
         printf("Erro na remocao do arquivo anterior\n");
@@ -986,13 +987,14 @@ int edit(char* texto, char clusterArquivo, MetaDados metaDados){
         return 0;
     }
 
+    pegaCluster(clusterArquivo, &dir, metaDados); //pega os metadados do cluster a ser editado
     atualCluster = clusterArquivo;
     //Loop para iterar sobre cada cluster necessario para armazenar o arquivo
     do{
         //Posiciona o ponteiro do arquivo no inicio do cluster principal do arquivo
-        fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * atualCluster + sizeof(NodoCluster)), SEEK_SET);
+        fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * atualCluster + indexCluster), SEEK_SET);
         //Escreve o texto no cluster ate chegar no final do texto ou ocupar o cluster todo
-        while((texto[indexTexto] != '\0') && (indexCluster < (metaDados.tamCluster * 1000) - sizeof(NodoCluster))){
+        while((texto[indexTexto] != '\0') && (indexCluster < (metaDados.tamCluster * 1000))){
             fwrite(&texto[indexTexto], sizeof(char), 1, arq);
             indexTexto++;
             indexCluster++;
@@ -1012,9 +1014,12 @@ int edit(char* texto, char clusterArquivo, MetaDados metaDados){
         }
 
     }while(proximoCluster != 0);
-    alteraTabelaFat(255, atualCluster, metaDados);          //Marca o cluter atual como final na tabela FAT
+
+    while(indexCluster < (metaDados.tamCluster * 1000))     //Preenche o restante do cluster com zeros
+        fwrite(&zero, sizeof(char), 1, arq);
 
     fclose(arq);
+    alteraTabelaFat(255, atualCluster, metaDados);          //Marca o cluter atual como final na tabela FAT
     if(ferror(arq)){
         printf("Erro na atualizacao dos clusters\n");
         return 0;
