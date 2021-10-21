@@ -817,6 +817,7 @@ int removeCluster(char cluster, MetaDados metaDados){
  */
     int aux = 0;
     FILE *arq;
+    NodoCluster dir;
 
 
     alteraTabelaFat(254, cluster, metaDados); //Marca o cluster, na tabela FAT, como 'disponível'
@@ -833,15 +834,20 @@ int removeCluster(char cluster, MetaDados metaDados){
         aux = fgetc(arq);
     }
 
-    aux = fgetc(arq);                               //Verifica se o cluster tem filhos
-    if(aux == 0){                                   //Se não tem filhos
-        fclose(arq);                                //Fecha arquivo
+    aux = fgetc(arq);                                   //Verifica se o cluster tem filhos
+    if(aux == 0){                                       //Se não tem filhos
+        fclose(arq);                                    //Fecha arquivo
         return 1;
-    }else{                                          //Se o cluster tem filhos
+    }else{                                              //Se o cluster tem filhos
         while(aux != 0){
-            if(aux != 254)                          //Se nao for um filho removido
-                removeCluster(aux, metaDados);      //Chama a função recursivamente para a sub-árvore do filho
-            aux = fgetc(arq);                       //pega o proximo filho
+            if(aux != 254){                             //Se nao for um filho removido
+                pegaCluster(aux, &dir, metaDados);      //Pega o cluster atual
+                if(!strcmp(dir.extensao, ""))           //Se nao tiver extensao
+                    removeCluster(aux, metaDados);      //Chama a função recursivamente para a sub-árvore do filho
+                else                                    //Se houver extensao
+                    removeArquivo(aux, metaDados);      //Apaga todo o arquivo
+            }
+            aux = fgetc(arq);                           //pega o proximo filho
         }
         fclose(arq);
         return 1;
