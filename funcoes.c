@@ -386,7 +386,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
  *      Inteiro positivo ou zero caso o caminho tenha sido encontrado
  *      -1 caso o caminho nao tenha sido encontrado
  */
-    int aux = 0, *comandoAux = NULL;
+    int aux = 0;
     long i = 0;
     FILE *arq;
     NodoCluster dir;
@@ -574,6 +574,42 @@ int divideTexto(char* texto, MetaDados metaDados){
     return clustersNecessarios;
 
 }
+
+int removeArquivo(char clusterArquivo, MetaDados metaDados){
+/* Dado um cluster que e' o local inicial de um arquivo .txt, marca como removido na tabela FAT
+ * todos os possiveis endereços que sao ocupados pelo arquivo
+ * Entrada:
+ *      Char que representa o ponteiro para o cluster a ser removido
+ *      Metadados para auxliar na busca dentro do arquivo binario
+ * Retorno:
+ *      1 caso haja sucesso na remocao
+ *      0 caso haja alguma falha
+ */
+    char aux, FE = 254;
+    FILE* arq;
+
+    if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
+        printf("Erro na abertura do arquivo\n");
+        return 0;
+    }
+
+    fseek(arq, sizeof(char) * (metaDados.initIndice + clusterArquivo), SEEK_SET); //vai ate o indice a ser removido
+
+    do{
+        aux = fgetc(arq);
+        fseek(arq, sizeof(char)*(-1), SEEK_CUR);
+        fwrite(&FE, sizeof(char), 1, arq);  //marcamos como apagado
+        fseek(arq, sizeof(char) * (metaDados.initIndice + aux), SEEK_SET); //vai ate o proximo indice sequencial ao arquivo
+    }while(aux != 255 && aux != 254 && aux != 0); //enquanto nao chegamos no final do arquivo ou estamos no caminho errado
+
+    fclose(arq);
+    if(ferror(arq)){
+        printf("Erro na remocao do arquivo!\n");
+        return 0;
+    }
+    return 1;
+}
+
 /*****************************************************************************************************/
 /*                                   FUNCOES PRINCIPAIS                                              */
 /*****************************************************************************************************/
@@ -986,29 +1022,31 @@ int reName(ListaStrings *listaCaminho, char* novoNome, char* diretorioAtual, Met
 
 int edit(char* texto, char clusterArquivo, MetaDados metaDados){
 /* Insere um texto dentro de um arquivo do tipo .txt
-*  Entrada:
-        char* variável que armazena o texto que será inserido no arquivo
-        cahr ponteiro que representa o cluster do arquivo que será modificado
-   Retorna:
-        1 caso a operação seja realizada com sucesso
-        0 caso ocorra um erro ao realizar a operação
-*/
+ * Entrada:
+ *      char* variável que armazena o texto que será inserido no arquivo
+ *      char ponteiro que representa o cluster do arquivo que será modificado
+ * Retorna:
+ *      1 caso a operação seja realizada com sucesso
+ *      0 caso ocorra um erro ao realizar a operação
+ */
     FILE *arq;
-    NodoCluster dir;
-    int qtdClusters = 0, proximoCluster = 0, i = 0, j = 0, zero = 0, ponteiroInicioArq = 0;
-
+    int qtdClusters = 0, i = 0, j = 0, m = 0, zero = 0, ponteiroInicioArq = 0, filho;
+    char proximoCluster = 0;
 
 
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
         printf("Erro na abertura do arquivo\n");
         return 0;
     }
+
     //calcula a quantidade de clusters necessários para armazenar o arquivo
     qtdClusters = divideTexto(texto, metaDados);
+
     //Posiciona o ponteiro do arquivo no inicio do cluster principal do arquivo
-    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * clusterArquivo + sizeof(NodoCluster) + 1), SEEK_SET);
+    fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * clusterArquivo + sizeof(NodoCluster)), SEEK_SET);
+
     if(qtdClusters == 1){//Se for necessário somente um cluster
-        int filho = temFilhos(clusterArquivo, metaDados);
+        filho = temFilhos(clusterArquivo, metaDados);
         ponteiroInicioArq = clusterArquivo;
         if(filho != 0){
             alteraTabelaFat(255, clusterArquivo, metaDados);
@@ -1019,22 +1057,22 @@ int edit(char* texto, char clusterArquivo, MetaDados metaDados){
                 filho = temFilhos(clusterArquivo, metaDados);
             }
         }
-        fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * ponteiroInicioArq + sizeof(NodoCluster) + 1), SEEK_SET);
+        fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * ponteiroInicioArq + sizeof(NodoCluster)), SEEK_SET);
         //Apaga o arquivo anteior
-        for(int i = 0; i < ((metaDados.tamCluster*1000) - sizeof(NodoCluster) - 1); i++){
+        for(i = 0; i < ((metaDados.tamCluster*1000) - sizeof(NodoCluster)); i++){
             fwrite(&zero, sizeof(char), 1, arq);
         }
-        fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * ponteiroInicioArq + sizeof(NodoCluster) + 1), SEEK_SET);
+        fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * ponteiroInicioArq + sizeof(NodoCluster)), SEEK_SET);
         //Escreve o texto até encontrar o final dele.
-        for(int i = 0; texto[i] != '\0'; i++){
+        for(i = 0; texto[i] != '\0'; i++){
             fwrite(&texto[i], sizeof(char), 1, arq);
         }
         //fecha o arquivo e retorna 1, indicando sucesso.
         fclose(arq);
         return 1;
     }else{//Se for necessário mais de um cluster para armazenar o texto
-        for(int m = 0; m < qtdClusters; m++){//Laço que controla a quantidade de clusters escritos
-            for(i; i < ((metaDados.tamCluster*1000) - sizeof(NodoCluster) - 1); i++){//Percorre o texto até chegar no máximo que um cluster consegue armazenar
+        for(m = 0; m < qtdClusters; m++){//Laço que controla a quantidade de clusters escritos
+            for(i; i < ((metaDados.tamCluster*1000) - sizeof(NodoCluster)); i++){//Percorre o texto até chegar no máximo que um cluster consegue armazenar
                 //Escreve o arquivo
                 fwrite(&texto[j], sizeof(char), 1, arq);
                 j++;
@@ -1068,7 +1106,7 @@ int edit(char* texto, char clusterArquivo, MetaDados metaDados){
             //Seta o i como 0 para continuar percorrendo o texto
             i = 0;
             //Coloca o ponteiro do arquivo no novo cluster que será preenchido
-            fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * clusterArquivo + sizeof(NodoCluster) + 1), SEEK_SET);
+            fseek(arq, metaDados.initCluster + ((metaDados.tamCluster * 1000) * clusterArquivo + sizeof(NodoCluster)), SEEK_SET);
         }
     }
 
