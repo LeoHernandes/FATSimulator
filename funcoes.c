@@ -633,18 +633,11 @@ int dir(char pai, MetaDados metaDados){
 
     aux = fgetc(arq);
 
-    int auxcmp;
-    auxcmp = pegaCluster(aux, &cluster, metaDados);
-    auxcmp = strcmp("root", cluster.nome);
-    if (auxcmp == 0)
-    {
-        printf("..\n");
-    }
-
-
    //Percorre a lista de filhos até o final e printa os nomes na tela.
         while(aux != 0){
             if(aux != 254){ //se nao for um filho removido
+                if(temFilho != 1 && pai != 0)
+                    printf("..\n");            //printa apenas uma vez os dois pontos caso nao esteja no root
                 temFilho = 1;
                 //guarda a posição do filho atual
                 i = ftell(arq);
