@@ -217,7 +217,7 @@ int alteraTabelaFat(char valor, char ponteiroCluster, MetaDados metaDados){
         return 0;
     }
 
-    fseek(arq, metaDados.initIndice + ponteiroCluster, SEEK_SET); //vai ate o indice correto da tabela FAT
+    fseek(arq, metaDados.initIndice + ponteiroCluster, SEEK_SET);      //vai ate o indice correto da tabela FAT
     fwrite(&valor, sizeof(char), 1, arq);                              //sobrescreve com o novo valor
 
     fclose(arq);
@@ -538,10 +538,10 @@ int removeArquivo(char clusterArquivo, MetaDados metaDados){
 
     do{
         aux = fgetc(arq);
-        fseek(arq, sizeof(char)*(-1), SEEK_CUR);
+        fseek(arq, -1, SEEK_CUR);
         fwrite(&FE, sizeof(char), 1, arq);  //marcamos como apagado
         fseek(arq, sizeof(char) * (metaDados.initIndice + aux), SEEK_SET); //vai ate o proximo indice sequencial ao arquivo
-    }while(aux != 255 && aux != 254 && aux != 0); //enquanto nao chegamos no final do arquivo ou estamos no caminho errado
+    }while(aux != -1 && aux != 254 && aux != 0); //enquanto nao chegamos no final do arquivo ou estamos no caminho errado
 
     fclose(arq);
     if(ferror(arq)){
@@ -633,11 +633,12 @@ int dir(char pai, MetaDados metaDados){
 
     aux = fgetc(arq);
 
+    if(pai != 0)
+        printf("..\n");            //printa apenas uma vez os dois pontos caso nao esteja no root
+
    //Percorre a lista de filhos até o final e printa os nomes na tela.
         while(aux != 0){
             if(aux != 254){ //se nao for um filho removido
-                if(temFilho != 1 && pai != 0)
-                    printf("..\n");            //printa apenas uma vez os dois pontos caso nao esteja no root
                 temFilho = 1;
                 //guarda a posição do filho atual
                 i = ftell(arq);
@@ -822,6 +823,12 @@ int removeCluster(char cluster, MetaDados metaDados){
 
     alteraTabelaFat(254, cluster, metaDados); //Marca o cluster, na tabela FAT, como 'disponível'
 
+    pegaCluster(aux, &dir, metaDados);      //Pega o cluster atual
+    if(strcmp(dir.extensao, "") != 0){      //Se tiver extensao
+        removeArquivo(aux, metaDados);      //Apaga todo o arquivo
+        return 1;                           //Encerra esta chamada
+    }
+
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
         printf("Erro na abertura do arquivo\n");
         return 0;
@@ -841,11 +848,7 @@ int removeCluster(char cluster, MetaDados metaDados){
     }else{                                              //Se o cluster tem filhos
         while(aux != 0){
             if(aux != 254){                             //Se nao for um filho removido
-                pegaCluster(aux, &dir, metaDados);      //Pega o cluster atual
-                if(!strcmp(dir.extensao, ""))           //Se nao tiver extensao
-                    removeCluster(aux, metaDados);      //Chama a função recursivamente para a sub-árvore do filho
-                else                                    //Se houver extensao
-                    removeArquivo(aux, metaDados);      //Apaga todo o arquivo
+                removeCluster(aux, metaDados);          //Chama a função recursivamente para a sub-árvore do filho
             }
             aux = fgetc(arq);                           //pega o proximo filho
         }
@@ -1021,8 +1024,10 @@ int edit(char* texto, char clusterArquivo, MetaDados metaDados){
 
     }while(proximoCluster != 0);
 
-    while(indexCluster < (metaDados.tamCluster * 1000))     //Preenche o restante do cluster com zeros
+    while(indexCluster < (metaDados.tamCluster * 1000)){    //Preenche o restante do cluster com zeros
         fwrite(&zero, sizeof(char), 1, arq);
+        indexCluster++;
+    }
 
     fclose(arq);
     alteraTabelaFat(255, atualCluster, metaDados);          //Marca o cluter atual como final na tabela FAT

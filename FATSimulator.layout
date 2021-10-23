@@ -2,66 +2,67 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
-	<File name="funcoes.c" open="1" top="1" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="16532" topLine="73" />
-		</Cursor>
-		<Folding>
-			<Collapse line="9" />
-			<Collapse line="58" />
-			<Collapse line="67" />
-			<Collapse line="68" />
-			<Collapse line="86" />
-			<Collapse line="97" />
-			<Collapse line="109" />
-			<Collapse line="110" />
-			<Collapse line="128" />
-			<Collapse line="137" />
-			<Collapse line="166" />
-			<Collapse line="167" />
-			<Collapse line="202" />
-			<Collapse line="203" />
-			<Collapse line="230" />
-			<Collapse line="231" />
-			<Collapse line="273" />
-			<Collapse line="315" />
-			<Collapse line="349" />
-			<Collapse line="451" />
-			<Collapse line="467" />
-			<Collapse line="492" />
-			<Collapse line="522" />
-			<Collapse line="559" />
-			<Collapse line="620" />
-			<Collapse line="687" />
-			<Collapse line="725" />
-			<Collapse line="762" />
-			<Collapse line="804" />
-			<Collapse line="872" />
-		</Folding>
-	</File>
 	<File name="estruturas.h" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="4" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="476" topLine="15" />
+			<Cursor1 position="476" topLine="19" />
 		</Cursor>
+	</File>
+	<File name="listaStrings.c" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="1317" topLine="0" />
+		</Cursor>
+		<Folding>
+			<Collapse line="4" />
+			<Collapse line="27" />
+			<Collapse line="42" />
+		</Folding>
 	</File>
 	<File name="funcoes.h" open="1" top="0" tabpos="6" split="0" active="1" splitpos="0" zoom_1="3" zoom_2="0">
 		<Cursor>
 			<Cursor1 position="248" topLine="0" />
 		</Cursor>
 	</File>
-	<File name="main.c" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="1" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="672" topLine="8" />
-		</Cursor>
-	</File>
-	<File name="listaStrings.c" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="1317" topLine="15" />
-		</Cursor>
-	</File>
 	<File name="listaStrings.h" open="1" top="0" tabpos="5" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
 			<Cursor1 position="23" topLine="0" />
 		</Cursor>
+	</File>
+	<File name="main.c" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="1" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="672" topLine="10" />
+		</Cursor>
+	</File>
+	<File name="funcoes.c" open="1" top="1" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="32566" topLine="1" />
+		</Cursor>
+		<Folding>
+			<Collapse line="9" />
+			<Collapse line="58" />
+			<Collapse line="67" />
+			<Collapse line="97" />
+			<Collapse line="109" />
+			<Collapse line="137" />
+			<Collapse line="166" />
+			<Collapse line="202" />
+			<Collapse line="230" />
+			<Collapse line="273" />
+			<Collapse line="315" />
+			<Collapse line="349" />
+			<Collapse line="377" />
+			<Collapse line="451" />
+			<Collapse line="467" />
+			<Collapse line="492" />
+			<Collapse line="518" />
+			<Collapse line="557" />
+			<Collapse line="605" />
+			<Collapse line="668" />
+			<Collapse line="723" />
+			<Collapse line="771" />
+			<Collapse line="808" />
+			<Collapse line="933" />
+			<Collapse line="971" />
+			<Collapse line="1036" />
+		</Folding>
 	</File>
 </CodeBlocks_layout_file>
