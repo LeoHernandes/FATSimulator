@@ -18,7 +18,6 @@ int mkDir(char* nome, char clusterPai, char cluster, MetaDados metaDados){
  *      String com o nome do diretorio dado pelo usuario
  *      Ponteiro (char) para o pai do diretório a ser criado
  *      Ponteiro (char) para o cluster diponível
- *      Tabela FAT que armazena os ponteiros dos discos
  *      Metadados para auxiliar na busca no arquivo
  * Retorno:
  *      1 caso seja realizado com sucesso
@@ -186,7 +185,6 @@ int mkFile(char* nome, char* extensao, char clusterPai, char cluster, MetaDados 
  *      String com a extensao do arquivo
  *      Ponteiro (char) para o pai do diretório a ser criado
  *      Ponteiro (char) para o cluster diponível
- *      Tabela FAT que armazena os ponteiros dos discos
  *      Metadados para auxiliar na busca no arquivo
  * Retorno:
  *      1 caso seja realizado com sucesso
@@ -267,8 +265,8 @@ int rm(ListaStrings *listaCaminho, char *diretorioAtual, char *diretorioSolicita
 int removeCluster(char cluster, MetaDados metaDados){
 /*  Função que remove uma sub-árvore de cluster do disco
  *  Entrada:
- *          Char que representa o ponteiro, da tabela FAT, que desejamos remover
- *          MetaDados metadados do disco que serão utilizados para realizar as operações com o fseek.
+ *      Char que representa o ponteiro, da tabela FAT, que desejamos remover
+ *      MetaDados metadados do disco que serão utilizados para realizar as operações com o fseek.
  *  Retorno:
  *      1 caso a função seja realizada com sucesso
  *      0 caso o caminho tenha dado algum erro durante a execução da função
@@ -362,7 +360,7 @@ int move(ListaStrings *origem, ListaStrings *destino, char *diretorioAtual, Meta
             *diretorioAtual = 0;                                //Coloca o usuario no diretorio root
         }
         pegaCluster(dirDestino, &clusterDestino, metaDados);
-        if(dirDestino!= -1){                                             //Verifica se o caminho de fato existe
+        if(dirDestino!= -1 && dirDestino != dirRemovido){       //Verifica se o caminho de fato existe e se nao e' o mesmo da origem
             if(dirDestino == dirRemovido){
                 printf("Nao e possivel mover uma pasta para ela mesmo.\n");
                 return 0;
@@ -433,6 +431,7 @@ int edit(char* texto, char clusterArquivo, MetaDados metaDados){
  * Entrada:
  *      char* variável que armazena o texto que será inserido no arquivo
  *      char ponteiro que representa o cluster do arquivo que será modificado
+ *      Metadados para auxiliar na busca dentro do arquivo binario
  * Retorna:
  *      1 caso a operação seja realizada com sucesso
  *      0 caso ocorra um erro ao realizar a operação
@@ -506,8 +505,8 @@ void detectaComando(char comando[], char** caminho, char *dirAtual, short int* s
  * separando a operação do possível nome de diretórios e arquivos
  * Entrada:
  *      Input de comando dado pelo ususario
+ *      Ponteiro de ponteiro para a string que representa o caminho onde o usuario esta
  *      Ponteiro (linha) do diretorio atual
- *      Tabela FAT que armazena os ponteiros dos discos
  *      Flag que controla o comando de saida do usuario
  *      Metadados para auxiliar na busca no arquivo
  */

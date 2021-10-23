@@ -55,6 +55,7 @@ void pegaOperacaoNome(char comando[], char** operacao, char** nome, char** resto
  *      String do comando todo fornecido pelo usuário
  *      Ponteiro para a string que armazena a operação
  *      Ponteiro para a string que armazena o nome do diretorio ou arquivo
+ *      Ponteiro para a string que armazena qualquer informacao restante
  */
     *operacao = strtok(comando, " ");
     *nome = strtok(NULL, " ");

@@ -63,7 +63,6 @@ int pegaMetadados(MetaDados* metaDados){
 /* Carrega os metadados do arquivo de disco se possível
  * Entrada:
  *      Ponteiro para estrutura de metadados para preencher
- *      Metadados para auxiliar na busca no arquivo
  * Retorno:
  *      1 se a operação for feita com sucesso
  *      0 se a operação falhar
@@ -304,6 +303,7 @@ int modificaNodoCluster(NodoCluster nodoCluster, char ponteiroCluster, MetaDados
  * Entrada:
  *      Estrutura NodoCluster que vai ser gravada
  *      Char representando o ponteiro para a posicao disponivel
+ *      Metadados para auxiliar na busca dentro do arquivo binario
  * Retorno:
  *      1 caso haja sucesso na gravacao
  *      0 caso haja falha
