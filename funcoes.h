@@ -1,6 +1,6 @@
 #include "estruturas.h"
 
-int inicializaArquivo();
+int inicializaBinario();
 
 void inicializaCaminho(char** caminho);
 
