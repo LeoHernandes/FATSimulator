@@ -1,3 +1,10 @@
+/*****************************************************************************************************/
+/*                                   FUNCOES AUXILIARES                                              */
+/*****************************************************************************************************/
+/* Funcoes que criam, leem, adicionam, editam e removem informacoes do arquivo binario diretamente.  */
+/* Com elas conseguimos pegar informacoes dos metadados, tabela de indices e clusters.               */
+/*****************************************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

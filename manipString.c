@@ -1,3 +1,10 @@
+/*****************************************************************************************************/
+/*                                   FUNCOES AUXILIARES                                              */
+/*****************************************************************************************************/
+/* Funcoes que manipulam strings e alocam precisamente o espaco necessario para armazena-las.        */
+/* Servem tanto para receber o input do usuario quanto para construir strings visiveis no terminal.  */
+/*****************************************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
