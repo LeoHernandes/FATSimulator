@@ -29,12 +29,12 @@ int mkDir(char* nome, char clusterPai, char cluster, MetaDados metaDados){
 
     if(strcmp(nome, "") != 0){
         lsNome = inserirLSEStrings(lsNome, nome);
-        if(encontraCaminho(lsNome, clusterPai, clusterPai, metaDados) != -1){
+        if(encontraCaminho(lsNome, clusterPai, clusterPai, metaDados) != -1){ //se ja existe um diretorio com o mesmo nome
             apagaLSE(lsNome);
             printf("Ja existe um diretorio com esse nome.\n");
             return 0;
         }
-         apagaLSE(lsNome);
+        apagaLSE(lsNome);
     }
     //Cria o novo Cluster
     strcpy(novo.nome, nome);
@@ -414,8 +414,17 @@ int reName(ListaStrings *listaCaminho, char* novoNome, char* diretorioAtual, Met
         ponteiroCluster = encontraCaminho(aux, *diretorioAtual, *diretorioAtual, metaDados); //Encontra o cluster procurado
         if(ponteiroCluster != -1){                                                           //Se encontrou
             pegaCluster(ponteiroCluster, &cluster, metaDados);                               //Pega o cluster
-            strcpy(cluster.nome, strtok(novoNome, "."));                                     //Modifica o nome
-            return(modificaNodoCluster(cluster, ponteiroCluster, metaDados));                //Grava o cluster modificado
+            aux = NULL;
+            aux = inserirLSEStrings(aux, novoNome);
+            if(encontraCaminho(aux, cluster.pai, cluster.pai, metaDados) != -1){             //Se ja existe um diretorio com o mesmo nome
+                apagaLSE(aux);
+                printf("Nome ja existente\n");                                               //Avisa ao usuario
+                return 0;                                                                    //Retorna erro
+            }else{                                                                           //Se nao existe ainda
+                apagaLSE(aux);
+                strcpy(cluster.nome, strtok(novoNome, "."));                                 //Modifica o nome
+                return(modificaNodoCluster(cluster, ponteiroCluster, metaDados));            //Grava o cluster modificado
+            }
         }else{                                                                               //Se nao encontrou
             printf("Caminho nao encontrado\n");                                              //Avisa ao usuario
             return 0;                                                                        //Retorna o erro
