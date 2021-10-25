@@ -383,7 +383,7 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
                     }else{
                         return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados); //senao chama a função recursivamente
                     }
-                }else if(!strcmp(nome, dir.nome) && extensao != NULL && (!strcmp(dir.extensao, "TXT"))){
+                }else if(!strcmp(nome, dir.nome) && extensao != NULL && (strcmp(dir.extensao, "") != 0)){
                     //Se as condições não forem satisfeitas, verifica se o nome do arquivo é igual ao solicitado, se a extensão não é nula e se a extensão do diretório é igual à TXT
                     fclose(arq);
                     if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
