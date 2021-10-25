@@ -342,6 +342,8 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
     long i = 0;
     FILE *arq;
     NodoCluster dir;
+    char* nome;
+    char *extensao;
 
     if((arq = fopen("ArqDisco.bin", "r+b")) == NULL){
         printf("Erro na abertura do arquivo\n");
@@ -361,6 +363,9 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
         fclose(arq);                        //Fecha o arquivo e retorna 0, indicando erro.
         return -1;
     }else{                                  //Se não, busca se há uma pasta/arquivo com o nome solicitado no caminho indicado
+        //variáveis que armazenam o nome e a extensao do diretorio/arquivo
+        nome = strtok(listaComandos->comando, ".");
+        extensao = strtok(NULL, "\0");
         while(aux != 0){
             if(aux != 254){                 //Se nao for um filho removido
                 i = ftell(arq);              //guarda a posição atual na lista de filhos
@@ -369,25 +374,23 @@ int encontraCaminho(ListaStrings *listaComandos, char diretorioAtual, char subdi
                     fclose(arq);
                     return -1;
                 }
-                //Verifica se o nome da pasta/arquivo encontrada na lista de filhos possui o mesmo nome do caminho solicitado
-                if(!strcmp(strtok(listaComandos->comando, "."), dir.nome)){
-                    //Se o caminho nao possui extensao e cluster tambem nao possui
-                    if(!strcmp(dir.extensao, "")){
-                        fclose(arq);
-                        if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
-                            return aux;
-                        }else{
-                            return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados); //senao chama a função recursivamente
-                        }
-                    //Se o caminho possui extensao e o cluster tambem
-                    }else if(strcmp(dir.extensao, "") != 0){
-                        fclose(arq);
-                        if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
-                            return aux;
-                        }else{                             //Se existe mais caminhos, encerra a funcao com erro
-                            printf("Tentativa de acesso a um filho de um arquivo\n");
-                            return -1;
-                        }
+                //Verifica se o nome da pasta é igual ao nome solicitado, se a extensão é nula e se a extensao do direrorio é vazia
+                if(!strcmp(nome, dir.nome) && (extensao == NULL) && (!strcmp(dir.extensao, ""))){
+                    //Se as condições forem satisfeitas, fecha o arquivo
+                    fclose(arq);
+                    if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
+                        return aux;
+                    }else{
+                        return encontraCaminho(listaComandos->prox, diretorioAtual, aux, metaDados); //senao chama a função recursivamente
+                    }
+                }else if(!strcmp(nome, dir.nome) && extensao != NULL && (!strcmp(dir.extensao, "TXT"))){
+                    //Se as condições não forem satisfeitas, verifica se o nome do arquivo é igual ao solicitado, se a extensão não é nula e se a extensão do diretório é igual à TXT
+                    fclose(arq);
+                    if(listaComandos->prox == NULL){   //Se nao tem mais caminho, retorna o cluster atual
+                        return aux;
+                    }else{                             //Se existe mais caminhos, encerra a funcao com erro
+                        printf("Tentativa de acesso a um filho de um arquivo\n");
+                        return -1;
                     }
                 }
                 fseek(arq, i, SEEK_SET);

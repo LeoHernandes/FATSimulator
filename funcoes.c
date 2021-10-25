@@ -193,8 +193,10 @@ int mkFile(char* nome, char* extensao, char clusterPai, char cluster, MetaDados 
     NodoCluster novo = {"", "", 'a', '*'};
     ListaStrings *lsNome;
     lsNome = NULL;
-
-    lsNome = inserirLSEStrings(lsNome, nome);
+    char nomeTemp[strlen(nome)+4];
+    strcpy(nomeTemp, nome);
+    strcat(nomeTemp, ".TXT");
+    lsNome = inserirLSEStrings(lsNome, nomeTemp);
 
     if(encontraCaminho(lsNome, clusterPai, clusterPai, metaDados) != -1){
         apagaLSE(lsNome);
