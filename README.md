@@ -34,6 +34,16 @@ Para criar um diretório basta executar o comando **MKDIR** *nome do diretório*
 ### Entrando em um diretório
 
 ### Removendo um diretório
+  
+### Criando um arquivo
+  
+### Editando um arquivo
+  
+### Renomeando um diretório/arquivo
+
+### Movendo um diretório/arquivo
+
+### Removendo um diretório/arquivo
 
 
 [^1]: A organização de pastas e arquivos dentro do sistema Light-FS pode ser visto como uma árvore de grau n. O nó raiz do sistema é o diretório root. Uma lista de filhos são os filhos do nó pai.
