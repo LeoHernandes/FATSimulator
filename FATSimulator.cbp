@@ -43,6 +43,14 @@
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="manipBinario.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="manipBinario.h" />
+		<Unit filename="manipString.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="manipString.h" />
 		<Extensions>
 			<lib_finder disable_auto="1" />
 		</Extensions>

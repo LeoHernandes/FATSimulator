@@ -1,3 +1,10 @@
+/*****************************************************************************************************/
+/*                                   FUNCOES AUXILIARES                                              */
+/*****************************************************************************************************/
+/* Funcoes que criam, armazenam e deletam listas de string.                                          */
+/* Servem para armazenar sequencias de caminhos dadas pelo usuario, separando string pela '/'.       */
+/*****************************************************************************************************/
+
 #include <stdlib.h>
 #include <string.h>
 #include "estruturas.h"

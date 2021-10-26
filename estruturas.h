@@ -3,11 +3,11 @@
 /*------------*/
 
 #define TAMCLUSTER  32
-#define TAMTABELA   256
+#define TAMTABELA   254
 #define INITABELA   8
-#define INITCLUSTER 264
+#define INITCLUSTER 262
 #define REALLOCSIZE 16
-#define TAMNOME     64
+#define TAMNOME     32
 #define TAMEXTENSAO 3
 
 /*------------*/
@@ -22,8 +22,8 @@ typedef struct TipoListaStrings{
 
 /* Árvore armazenando distribuição de arquivos e pastas num cluster */
 typedef struct TipoCluster{
-    char nome[TAMNOME];
-    char extensao[TAMEXTENSAO];
+    char nome[TAMNOME + 1];
+    char extensao[TAMEXTENSAO + 1];
     char pai;
     char marcador;
 }NodoCluster;

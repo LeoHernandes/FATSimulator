@@ -13,7 +13,7 @@ int main(){
     short int sair = 0;            //flag para manter o loop de escrita de comandos rodando
     MetaDados metaDados;
 
-    if(inicializaArquivo()){
+    if(inicializaBinario()){
         if(pegaMetadados(&metaDados)){ //se foi possivel carregar os metadados
             inicializaCaminho(&caminho);
             do{
